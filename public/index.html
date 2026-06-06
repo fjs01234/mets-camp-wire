@@ -10,7 +10,7 @@
   * { margin:0; padding:0; box-sizing:border-box; }
   body { background:var(--dark); color:var(--white); font-family:'IBM Plex Sans',sans-serif; min-height:100vh; }
   body::before { content:''; position:fixed; inset:0; background:radial-gradient(ellipse at 20% 50%,rgba(0,45,114,.4) 0%,transparent 60%),radial-gradient(ellipse at 80% 20%,rgba(255,89,16,.15) 0%,transparent 50%); pointer-events:none; z-index:0; }
-  .container { position:relative; z-index:1; max-width:820px; margin:0 auto; padding:40px 20px 80px; }
+  .container { position:relative; z-index:1; max-width:860px; margin:0 auto; padding:40px 20px 80px; }
   .header { text-align:center; margin-bottom:40px; }
   .logo-line { display:flex; align-items:center; justify-content:center; gap:16px; margin-bottom:8px; }
   .badge { width:52px; height:52px; background:var(--blue); border:3px solid var(--orange); border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Bebas Neue',cursive; font-size:18px; color:var(--orange); flex-shrink:0; }
@@ -25,14 +25,29 @@
   .loading.on { display:block; }
   .loading-title { font-family:'Bebas Neue',cursive; font-size:26px; letter-spacing:3px; color:var(--orange); margin-bottom:10px; }
   .loading-sub { font-family:'IBM Plex Mono',monospace; font-size:12px; color:rgba(248,244,239,.4); animation:blink 1.2s infinite; }
+  .err { display:none; background:rgba(255,50,50,.1); border:1px solid rgba(255,50,50,.3); border-radius:4px; padding:18px; text-align:center; color:#ff8080; font-family:'IBM Plex Mono',monospace; font-size:12px; line-height:1.6; margin-top:12px; }
+  .err.on { display:block; }
+
+  /* Two column email layout */
+  .emails-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  @media(max-width:640px){ .emails-grid { grid-template-columns:1fr; } }
+
+  .email-card { background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.1); border-radius:6px; overflow:hidden; }
+  .email-card-header { padding:14px 18px; display:flex; align-items:center; justify-content:space-between; }
+  .email-card-header.noah { background:rgba(0,45,114,.4); border-bottom:2px solid var(--blue); }
+  .email-card-header.emily { background:rgba(255,89,16,.15); border-bottom:2px solid var(--orange); }
+  .card-name { font-family:'Bebas Neue',cursive; font-size:22px; letter-spacing:2px; }
+  .card-name.noah { color:#6b9dff; }
+  .card-name.emily { color:var(--orange); }
+  .card-age { font-family:'IBM Plex Mono',monospace; font-size:10px; color:rgba(248,244,239,.4); letter-spacing:2px; }
+  .copy-btn { padding:6px 14px; background:transparent; border:1px solid rgba(255,255,255,.2); color:rgba(255,255,255,.6); border-radius:3px; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:1px; cursor:pointer; transition:all .2s; text-transform:uppercase; }
+  .copy-btn:hover { border-color:var(--orange); color:var(--orange); }
+  .copy-btn.ok { background:#4ade80; border-color:#4ade80; color:white; }
+  .email-box { padding:18px; font-family:'IBM Plex Mono',monospace; font-size:12px; line-height:1.75; color:var(--cream); white-space:pre-wrap; word-break:break-word; min-height:400px; max-height:600px; overflow-y:auto; }
+
   .output { display:none; }
   .output.on { display:block; }
-  .out-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; flex-wrap:wrap; gap:10px; }
-  .out-label { font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:3px; text-transform:uppercase; color:var(--orange); }
-  .copy-btn { padding:8px 18px; background:transparent; border:1px solid var(--orange); color:var(--orange); border-radius:3px; font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:2px; cursor:pointer; transition:all .2s; text-transform:uppercase; }
-  .copy-btn:hover { background:var(--orange); color:white; }
-  .copy-btn.ok { background:#4ade80; border-color:#4ade80; color:white; }
-  .email-box { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.1); border-radius:4px; padding:24px; font-family:'IBM Plex Mono',monospace; font-size:13px; line-height:1.8; color:var(--cream); white-space:pre-wrap; word-break:break-word; min-height:280px; }
+
   .instructions { margin-top:20px; padding:18px 22px; background:rgba(0,45,114,.2); border:1px solid rgba(0,45,114,.5); border-radius:4px; }
   .inst-title { font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:3px; color:#6b9dff; text-transform:uppercase; margin-bottom:10px; }
   .instructions ol { padding-left:18px; font-size:13px; color:rgba(248,244,239,.7); line-height:2.2; }
@@ -40,8 +55,7 @@
   .regen { text-align:center; margin-top:18px; }
   .regen-btn { background:transparent; border:1px solid rgba(255,255,255,.15); color:rgba(255,255,255,.4); padding:8px 20px; border-radius:3px; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:2px; cursor:pointer; transition:all .2s; text-transform:uppercase; }
   .regen-btn:hover { border-color:var(--orange); color:var(--orange); }
-  .err { display:none; background:rgba(255,50,50,.1); border:1px solid rgba(255,50,50,.3); border-radius:4px; padding:18px; text-align:center; color:#ff8080; font-family:'IBM Plex Mono',monospace; font-size:12px; line-height:1.6; margin-top:12px; }
-  .err.on { display:block; }
+
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
 </style>
@@ -54,36 +68,58 @@
       <h1>Mets Camp Wire</h1>
       <div class="badge">NYM</div>
     </div>
-    <div class="subtitle">Daily Dispatch for Noah &amp; Emily at Camp</div>
+    <div class="subtitle">Daily Dispatch for Noah &amp; Emily at Camp Schodack</div>
   </div>
   <div class="dateline">
     <div class="dot"></div>
     <span id="dateDisplay"></span>
     <span>·</span><span>Live ESPN Data</span>
   </div>
-  <button class="btn" id="genBtn" onclick="go()">⚾ Generate Today's Recap</button>
+
+  <button class="btn" id="genBtn" onclick="go()">⚾ Generate Today's Emails</button>
+
   <div class="loading" id="loading">
     <div class="loading-title">Pulling from the dugout...</div>
     <div class="loading-sub">Fetching today's Mets data...</div>
   </div>
   <div class="err" id="err"></div>
+
   <div class="output" id="output">
-    <div class="out-header">
-      <div class="out-label">✉ Ready to paste into CampInTouch</div>
-      <button class="copy-btn" id="copyBtn" onclick="copyIt()">Copy Email</button>
+    <div class="emails-grid">
+      <div class="email-card">
+        <div class="email-card-header noah">
+          <div>
+            <div class="card-name noah">Noah</div>
+            <div class="card-age">AGE 15</div>
+          </div>
+          <button class="copy-btn" id="copyNoah" onclick="copyIt('noahBox','copyNoah')">Copy</button>
+        </div>
+        <div class="email-box" id="noahBox"></div>
+      </div>
+      <div class="email-card">
+        <div class="email-card-header emily">
+          <div>
+            <div class="card-name emily">Emily</div>
+            <div class="card-age">AGE 12</div>
+          </div>
+          <button class="copy-btn" id="copyEmily" onclick="copyIt('emilyBox','copyEmily')">Copy</button>
+        </div>
+        <div class="email-box" id="emilyBox"></div>
+      </div>
     </div>
-    <div class="email-box" id="emailBox"></div>
+
     <div class="instructions">
       <div class="inst-title">How to send</div>
       <ol>
-        <li>Click <strong>Copy Email</strong> above</li>
+        <li>Click <strong>Copy</strong> on each email above</li>
         <li>Go to <a href="https://schodack.campintouch.com" target="_blank">schodack.campintouch.com</a> and log in</li>
-        <li>Open messaging, paste, and send to Noah &amp; Emily</li>
+        <li>Send Noah's email to Noah, Emily's email to Emily</li>
       </ol>
     </div>
     <div class="regen"><button class="regen-btn" onclick="go()">↻ Regenerate</button></div>
   </div>
 </div>
+
 <script>
 const PROXY = 'https://sports-proxy-a8md.onrender.com';
 const NYM_ID = '21';
@@ -92,57 +128,132 @@ document.getElementById('dateDisplay').textContent = new Date().toLocaleDateStri
 
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 
-const dadJokes = [
-  "Why did the Mets pitcher bring a ladder to the game? Because he heard the stakes were high!",
-  "What do you call a Mets fan who can count to 10? A manager!",
-  "Why don't Mets players ever get hot in the summer? Because they have so many fans!",
-  "Trivia: Which Mets pitcher threw the first no-hitter in Citi Field history? (Answer: Johan Santana, 2012!)",
-  "Trivia: What year did the Mets win their first World Series? (Answer: 1969 -- the Miracle Mets!)",
-  "Trivia: What is the Mets home stadium called? (Answer: Citi Field, opened in 2009!)",
-  "Why did the Mets fan bring string to the game? So he could tie the score!",
-  "Trivia: Who holds the Mets record for career home runs? (Answer: Darryl Strawberry with 252!)",
-];
-
-const winOpeners = [
-  "BIG news from Flushing --",
-  "Your boys did it again --",
-  "Let's GOOO Mets --",
-  "Break out the blue and orange --",
-  "Dad is doing a victory dance right now --",
-];
-
-const lossOpeners = [
-  "Tough one tonight, but we bounce back --",
-  "Not our night, but the Mets never quit --",
-  "Every champion has rough patches --",
-  "We'll get em tomorrow --",
-  "The Mets are built for comebacks --",
-];
-
-const offDayOpeners = [
-  "No game today, but plenty of Mets news --",
-  "The boys have the day off, but your dad doesn't --",
-  "Rest day for the Mets -- time to catch up on the latest --",
-];
-
-const moods = {
-  bigWin:   ["LET'S GOOO", "ON FIRE", "ELECTRIC", "ABSOLUTELY COOKING"],
-  win:      ["Feeling Good", "Solid", "Happy Dad", "Pumped Up"],
-  loss:     ["We Bounce Back", "Staying Positive", "Building Character"],
-  bigLoss:  ["Rough Night", "Tomorrow Is Another Day", "We Believe"],
-  offDay:   ["Steady", "Keeping the Faith", "Always Mets"],
+// Noah (15) - more stats-focused, uses baseball lingo, treats him like a real fan
+const noahOpeners = {
+  bigWin: ["Absolute FILTH from the Mets tonight --","Your boys went off tonight --","Dad almost lost his voice yelling at the TV --","This is why we're Mets fans --"],
+  win:    ["Solid W for the good guys --","Mets get it done --","Another one in the win column --","Your boys came through --"],
+  loss:   ["Tough loss but the lineup has been scuffling --","Not our night -- pitching let us down --","We'll bounce back, we always do --","Brutal one tonight --"],
+  bigLoss:["That one hurt to watch --","Rough night at the ballpark --","Some nights the baseball gods are just against you --"],
+  offDay: ["Day off for the Mets -- let's review the week --","No game today, but plenty to break down --"],
+};
+const emilyOpeners = {
+  bigWin: ["AMAZING news from the Mets!! --","Your team is ON FIRE right now!! --","Dad did a happy dance in the living room --","Best. Day. Ever. (for a Mets fan!) --"],
+  win:    ["Great news from your favorite team!! --","The Mets came through tonight!! --","Happy dad over here!! --","Good things are happening!! --"],
+  loss:   ["The Mets had a tough night, but they never give up! --","Not our night, but tomorrow is a new day!! --","Even champions have rough patches -- we still love our Mets!! --"],
+  bigLoss:["Ugh, tough one tonight -- but we believe!! --","The Mets will bounce back, I just know it!! --"],
+  offDay: ["No game today but I still have Mets news for you!! --","Rest day for the Mets -- here's what's going on!! --"],
 };
 
-function moodScore(type) {
-  return { bigWin: "9/10", win: "7/10", loss: "5/10", bigLoss: "3/10", offDay: "6/10" }[type];
-}
+const noahMoods =  { bigWin:"ABSOLUTELY SENDING IT -- 9/10", win:"Solid -- 7/10", loss:"Frustrating -- 4/10", bigLoss:"Brutal -- 2/10", offDay:"Steady -- 6/10" };
+const emilyMoods = { bigWin:"BEST DAY EVER!! -- 10/10 !!!", win:"Really Happy!! -- 8/10", loss:"A little sad but still hopeful -- 5/10", bigLoss:"Sending the Mets extra love tonight -- 3/10", offDay:"Feeling good about the team!! -- 7/10" };
+
+const noahJokes = [
+  "Trivia: Who holds the Mets single-season strikeout record for a pitcher? (Answer: Tom Seaver with 289 in 1971)",
+  "Trivia: What was the Mets' record in their inaugural 1962 season? (Answer: 40-120 -- worst in modern history -- and we still love them!)",
+  "Trivia: Who hit the famous 'Ball on the Wall' home run for the Mets in the 1986 World Series? (Answer: Mookie Wilson's grounder went through Buckner's legs -- close enough!)",
+  "Trivia: How many no-hitters have been thrown at Citi Field? (Answer: Johan Santana's in 2012 -- the only one in Mets history!)",
+  "Hot take for you to debate with your bunk: best Mets player ever -- Seaver, Strawberry, Piazza, or deGrom?",
+];
+const emilyJokes = [
+  "Mets fun fact: The Mets colors are blue and orange because they combined the colors of the two NYC teams that left (Dodgers blue + Giants orange). How cool is that??",
+  "Did you know? The Mets mascot is named Mr. Met and he has been around since 1964 -- one of the first mascots in baseball!!",
+  "Fun fact: Citi Field has a real apple that pops up whenever a Met hits a home run. It's called the Home Run Apple!!",
+  "Mets trivia: What do the Mets and the moon have in common? They both have craters! (Just kidding -- Dad joke!!)",
+  "Did you know the Mets won the World Series in 1969 and everyone called them the 'Miracle Mets' because nobody believed they could do it? Kind of like how nobody believed YOU could make the camp team -- and look at you now!!",
+];
 
 async function fetchJSON(url) {
-  try {
-    const r = await fetch(url);
-    if (!r.ok) return null;
-    return await r.json();
-  } catch { return null; }
+  try { const r = await fetch(url); if (!r.ok) return null; return await r.json(); }
+  catch { return null; }
+}
+
+function formatNewsForNoah(articles) {
+  if (!articles.length) return '';
+  let out = '\nMETS NEWS & NOTES:\n';
+  articles.slice(0,3).forEach((a,i) => {
+    out += `\n${i+1}. ${a.headline}`;
+    if (a.description) out += `\n   ${a.description}`;
+    if (a.story) out += `\n   ${a.story.slice(0,200).trim()}${a.story.length>200?'...':''}`;
+    out += '\n';
+  });
+  return out;
+}
+
+function formatNewsForEmily(articles) {
+  if (!articles.length) return '';
+  let out = '\nHERE IS WHAT IS HAPPENING WITH THE METS:\n';
+  articles.slice(0,2).forEach((a,i) => {
+    out += `\n${i+1}. ${a.headline}`;
+    if (a.description) out += `\n   ${a.description}`;
+    out += '\n';
+  });
+  return out;
+}
+
+function buildGameSection(game, forNoah) {
+  if (!game) return { type:'offDay', text: forNoah
+    ? 'No game on the schedule today. Good time to check the standings and see where we are in the division.'
+    : 'No Mets game today!! The players are resting up for the next one!!' };
+
+  const comp = game.competitions[0];
+  const nym = comp.competitors.find(c=>c.team?.abbreviation==='NYM');
+  const opp = comp.competitors.find(c=>c.team?.abbreviation!=='NYM');
+  const nymScore = parseInt(nym?.score||'0');
+  const oppScore = parseInt(opp?.score||'0');
+  const oppName = opp?.team?.displayName || 'the opponent';
+  const oppAbbr = opp?.team?.abbreviation || 'OPP';
+  const atHome = nym?.homeAway==='home';
+  const completed = comp.status?.type?.completed;
+  const status = comp.status?.type?.description || '';
+  const diff = Math.abs(nymScore - oppScore);
+  const won = nymScore > oppScore;
+
+  let moodType, text;
+
+  if (completed) {
+    moodType = won ? (diff>=5?'bigWin':'win') : (diff>=5?'bigLoss':'loss');
+
+    if (forNoah) {
+      text = `FINAL: NYM ${nymScore}, ${oppAbbr} ${oppScore} -- ${won?'W':'L'}\n`;
+      text += `${atHome?'Home':'Away'} game vs. the ${oppName}.\n`;
+      text += won
+        ? `Mets take it ${nymScore}-${oppScore}. ${diff>=5?'Dominant performance.':'Grinded out the win.'}`
+        : `Dropped this one ${nymScore}-${oppScore}. ${diff>=5?'Rough night all around.':'Close game, just not enough.'}`; 
+    } else {
+      text = `FINAL SCORE: METS ${nymScore}, ${oppName.toUpperCase()} ${oppScore}\n\n`;
+      text += won
+        ? `Your Mets ${diff>=5?'absolutely crushed':'beat'} the ${oppName} tonight!! The final score was METS ${nymScore} and ${oppName} ${oppScore}!! ${diff>=5?'What a game!!':'So exciting!!'}`
+        : `The Mets played really hard tonight but lost to the ${oppName} by a score of ${oppScore}-${nymScore}. ${diff>=5?'It was a tough night, but they will come back stronger!!':'It was a really close game though!!'} We still love our Mets no matter what!!`;
+    }
+  } else {
+    const isLive = status.toLowerCase().includes('progress') || status.toLowerCase().includes('end of');
+    moodType = 'offDay';
+    if (isLive) {
+      moodType = won ? 'win' : 'loss';
+      text = forNoah
+        ? `LIVE: NYM ${nymScore}, ${oppAbbr} ${oppScore} -- ${status}\nGame is going on right now vs. the ${oppName}. Check the MLB app!`
+        : `The Mets are playing RIGHT NOW vs. the ${oppName}!! The score is METS ${nymScore} and ${oppName} ${oppScore}!! So exciting!! Check with your counselor to see the score!!`;
+    } else {
+      text = forNoah
+        ? `Mets vs. ${oppName} today, ${atHome?'home at Citi Field':'on the road'}. Game time TBD.`
+        : `The Mets play the ${oppName} today!! Cheer them on from camp!! Go METS!!`;
+    }
+  }
+
+  return { type: moodType, text };
+}
+
+function buildHighlights(summaryData, forNoah) {
+  const moments = (summaryData?.keyMoments||[]).slice(0,3).map(m=>m?.text||'').filter(Boolean);
+  const plays = (summaryData?.highlights||[]).slice(0,2).map(h=>h?.text||'').filter(Boolean);
+  const all = [...moments, ...plays].filter(Boolean);
+  if (!all.length) return '';
+
+  if (forNoah) {
+    return '\nKEY MOMENTS:\n' + all.map(m=>`-- ${m}`).join('\n');
+  } else {
+    return '\nCOOL MOMENTS FROM THE GAME:\n' + all.map(m=>`-- ${m}`).join('\n');
+  }
 }
 
 async function go() {
@@ -162,120 +273,72 @@ async function go() {
     const espnDate = today.toISOString().slice(0,10).replace(/-/g,'');
     const dateStr = today.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
 
-    // Fetch all data in parallel
     const [scoreData, newsData, summaryData] = await Promise.all([
       fetchJSON(`${PROXY}/espn?path=sports/baseball/mlb/scoreboard&dates=${espnDate}`),
       fetchJSON(`${PROXY}/news/baseball/mlb/${NYM_ID}`),
       fetchJSON(`${PROXY}/lastsummary/baseball/mlb/${NYM_ID}`)
     ]);
 
-    // Parse game
-    let game = null;
-    if (scoreData?.events) {
-      game = scoreData.events.find(e =>
-        e.competitions?.[0]?.competitors?.some(c => c.team?.abbreviation === 'NYM')
-      );
-    }
+    const game = scoreData?.events?.find(e=>e.competitions?.[0]?.competitors?.some(c=>c.team?.abbreviation==='NYM')) || null;
+    const articles = newsData?.articles || [];
 
-    // Parse news headlines
-    const headlines = (newsData?.articles || []).slice(0, 3).map(a => a.headline).filter(Boolean);
+    const noahGame = buildGameSection(game, true);
+    const emilyGame = buildGameSection(game, false);
+    const moodType = noahGame.type;
 
-    // Parse last game summary / key moments
-    const keyMoments = (summaryData?.keyMoments || []).slice(0, 2).map(m => m?.text || '').filter(Boolean);
+    const highlights = buildHighlights(summaryData, true);
+    const highlightsEmily = buildHighlights(summaryData, false);
 
-    // Build email
-    let subject, opener, gameSection, moodType, moodPhrase;
+    const noahNews = formatNewsForNoah(articles);
+    const emilyNews = formatNewsForEmily(articles);
 
-    if (game) {
-      const comp = game.competitions[0];
-      const home = comp.competitors.find(c => c.homeAway === 'home');
-      const away = comp.competitors.find(c => c.homeAway === 'away');
-      const status = comp.status?.type?.description || '';
-      const completed = comp.status?.type?.completed;
-      const nymComp = comp.competitors.find(c => c.team?.abbreviation === 'NYM');
-      const oppComp = comp.competitors.find(c => c.team?.abbreviation !== 'NYM');
-      const nymScore = parseInt(nymComp?.score || '0');
-      const oppScore = parseInt(oppComp?.score || '0');
-      const oppName = oppComp?.team?.displayName || 'the opponent';
-      const atHome = nymComp?.homeAway === 'home';
-      const diff = Math.abs(nymScore - oppScore);
+    // NOAH EMAIL
+    const noahEmail =
+`SUBJECT: Mets ${moodType==='bigWin'||moodType==='win'?'WIN':'Update'} -- ${dateStr}
 
-      if (completed) {
-        const won = nymScore > oppScore;
-        moodType = won ? (diff >= 5 ? 'bigWin' : 'win') : (diff >= 5 ? 'bigLoss' : 'loss');
-        subject = won
-          ? `Mets WIN ${nymScore}-${oppScore}! ${diff >= 5 ? 'Dominant!' : 'Got the W!'}`
-          : `Mets drop one ${nymScore}-${oppScore} -- we bounce back`;
-        opener = pick(won ? winOpeners : lossOpeners);
-        gameSection = `FINAL SCORE: NEW YORK METS ${nymScore}, ${oppName.toUpperCase()} ${oppScore}
+Hey Noah,
 
-The Mets played ${atHome ? 'at home at Citi Field' : 'on the road'} tonight against the ${oppName}. Final score: METS ${nymScore}, ${oppName} ${oppScore}.${won ? ` Your boys got the W!` : ` Tough loss, but we keep moving.`}`;
+${pick(noahOpeners[moodType]||noahOpeners.offDay)}
 
-        if (keyMoments.length > 0) {
-          gameSection += '\n\nHIGHLIGHTS:\n' + keyMoments.map(m => '-- ' + m).join('\n');
-        }
-      } else {
-        // Game in progress or upcoming
-        const inning = comp.status?.period;
-        const isLive = status.toLowerCase().includes('in progress') || status.toLowerCase().includes('end of');
-        moodType = 'offDay';
-        if (isLive) {
-          const leading = nymScore > oppScore;
-          subject = leading
-            ? `Mets leading ${nymScore}-${oppScore} LIVE right now!`
-            : `Mets game in progress -- ${nymScore}-${oppScore}`;
-          opener = leading ? pick(winOpeners) : "Game is on right now --";
-          gameSection = `LIVE GAME UPDATE: METS ${nymScore}, ${oppName.toUpperCase()} ${oppScore} -- ${status}${inning ? ` (Inning ${inning})` : ''}
-
-The Mets are playing ${atHome ? 'at home' : 'on the road'} against the ${oppName} RIGHT NOW. Check the score on the MLB app if you can get to a phone!`;
-        } else {
-          subject = `Mets play the ${oppName} today -- let's go!`;
-          opener = pick(offDayOpeners);
-          gameSection = `TONIGHT'S GAME: METS vs. ${oppName.toUpperCase()}
-
-The Mets have a game scheduled ${atHome ? 'at Citi Field' : 'on the road'} against the ${oppName} today. Cheer them on from camp!`;
-        }
-      }
-    } else {
-      moodType = 'offDay';
-      subject = "Your daily Mets update from home base";
-      opener = pick(offDayOpeners);
-      gameSection = "No Mets game on the schedule today -- the boys are resting up for the next one!";
-    }
-
-    moodPhrase = pick(moods[moodType]);
-
-    // News section
-    let newsSection = '';
-    if (headlines.length > 0) {
-      newsSection = '\n\nMETS NEWS:\n' + headlines.map((h,i) => `${i+1}. ${h}`).join('\n');
-    }
-
-    // Dad joke / trivia
-    const joke = pick(dadJokes);
-
-    // Assemble full email
-    const email = `SUBJECT: ${subject}
-
-Hey Noah and Emily!
-
-${opener}
-
-${gameSection}${newsSection}
-
+${noahGame.text}
+${highlights}
+${noahNews}
 ---
-METS MOOD OF THE DAY: ${moodPhrase} -- ${moodScore(moodType)}
+METS MOOD: ${noahMoods[moodType]}
 ---
 
 DAD'S CORNER:
-${joke}
+${pick(noahJokes)}
 
-Miss you both like crazy. Keep representing the blue and orange up there at camp -- I want to hear everyone at Schodack knows who the Mets are!
+Keep repping the blue and orange up there. Miss you man.
+
+Love, Dad`;
+
+    // EMILY EMAIL
+    const emilyEmail =
+`SUBJECT: Your Mets Update from Dad!! ${moodType==='bigWin'||moodType==='win'?'Great News!!':''}
+
+Hi Emily!!
+
+${pick(emilyOpeners[moodType]||emilyOpeners.offDay)}
+
+${emilyGame.text}
+${highlightsEmily}
+${emilyNews}
+---
+METS MOOD OF THE DAY: ${emilyMoods[moodType]}
+---
+
+FUN METS FACT FOR YOU:
+${pick(emilyJokes)}
+
+I miss you so so much!! Give the Mets some good vibes from camp -- they need all the fans they can get!!
 
 Love you to Citi Field and back,
-Dad ⚾`;
+Dad xoxo`;
 
-    document.getElementById('emailBox').textContent = email;
+    document.getElementById('noahBox').textContent = noahEmail.trim();
+    document.getElementById('emilyBox').textContent = emilyEmail.trim();
     loading.classList.remove('on');
     output.classList.add('on');
 
@@ -287,16 +350,16 @@ Dad ⚾`;
   }
 
   btn.disabled = false;
-  btn.textContent = '⚾ Generate Today\'s Recap';
+  btn.textContent = '⚾ Generate Today\'s Emails';
 }
 
-function copyIt() {
-  const text = document.getElementById('emailBox').textContent;
-  const btn = document.getElementById('copyBtn');
+function copyIt(boxId, btnId) {
+  const text = document.getElementById(boxId).textContent;
+  const btn = document.getElementById(btnId);
   navigator.clipboard.writeText(text).then(()=>{
     btn.textContent = '✓ Copied!';
     btn.classList.add('ok');
-    setTimeout(()=>{ btn.textContent='Copy Email'; btn.classList.remove('ok'); },2500);
+    setTimeout(()=>{ btn.textContent='Copy'; btn.classList.remove('ok'); },2500);
   });
 }
 </script>
