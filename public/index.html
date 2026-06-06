@@ -16,7 +16,7 @@
   .badge { width:52px; height:52px; background:var(--blue); border:3px solid var(--orange); border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Bebas Neue',cursive; font-size:18px; color:var(--orange); flex-shrink:0; }
   h1 { font-family:'Bebas Neue',cursive; font-size:clamp(32px,7vw,60px); letter-spacing:3px; background:linear-gradient(135deg,var(--white) 40%,var(--orange)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; line-height:1; }
   .subtitle { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--orange); letter-spacing:4px; text-transform:uppercase; margin-top:6px; }
-  .dateline { text-align:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:rgba(248,244,239,.4); margin-bottom:28px; display:flex; align-items:center; justify-content:center; gap:8px; }
+  .dateline { text-align:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:rgba(248,244,239,.4); margin-bottom:28px; display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap; }
   .dot { width:6px; height:6px; border-radius:50%; background:#4ade80; animation:pulse 2s infinite; flex-shrink:0; }
   .btn { display:block; width:100%; padding:18px; background:var(--orange); color:white; border:none; border-radius:4px; font-family:'Bebas Neue',cursive; font-size:22px; letter-spacing:3px; cursor:pointer; transition:all .2s; margin-bottom:28px; }
   .btn:hover { background:#e04a00; transform:translateY(-1px); }
@@ -59,7 +59,7 @@
   <div class="dateline">
     <div class="dot"></div>
     <span id="dateDisplay"></span>
-    <span>·</span><span>Live ESPN + AI</span>
+    <span>·</span><span>Live ESPN + Gemini AI</span>
   </div>
   <button class="btn" id="genBtn" onclick="go()">⚾ Generate Today's Recap</button>
   <div class="loading" id="loading">
@@ -85,7 +85,44 @@
   </div>
 </div>
 <script>
+  const GEMINI_KEY = 'AIzaSyAb8RN6I-B96MHqQ6dvGJ6EShTU55CqozEEmCifFdK2YMFASDrw';
+  const PROXY = 'https://sports-proxy-a8md.onrender.com';
+
   document.getElementById('dateDisplay').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+
+  async function getESPN() {
+    const today = new Date();
+    const espnDate = today.toISOString().slice(0,10).replace(/-/g,'');
+    let gameContext = 'No Mets game today (off day).';
+    let newsContext = 'No recent Mets news available.';
+
+    try {
+      const r = await fetch(`${PROXY}/espn?path=sports/baseball/mlb/scoreboard&dates=${espnDate}`);
+      if (r.ok) {
+        const j = await r.json();
+        const game = (j.events||[]).find(e=>e.competitions?.[0]?.competitors?.some(c=>c.team?.abbreviation==='NYM'));
+        if (game) {
+          const comp = game.competitions[0];
+          const home = comp.competitors.find(c=>c.homeAway==='home');
+          const away = comp.competitors.find(c=>c.homeAway==='away');
+          const status = comp.status?.type?.description || '';
+          const venue = comp.venue?.fullName || '';
+          gameContext = `${away.team.displayName} @ ${home.team.displayName}\nScore: ${away.team.displayName} ${away.score} - ${home.team.displayName} ${home.score}\nStatus: ${status}${venue?'\nVenue: '+venue:''}`;
+        }
+      }
+    } catch(e) { console.log('ESPN score:', e.message); }
+
+    try {
+      const r = await fetch(`${PROXY}/news/baseball/mlb/21`);
+      if (r.ok) {
+        const j = await r.json();
+        const arts = (j.articles||[]).slice(0,4);
+        if (arts.length) newsContext = arts.map((a,i)=>`${i+1}. ${a.headline}${a.description?' - '+a.description:''}`).join('\n');
+      }
+    } catch(e) { console.log('ESPN news:', e.message); }
+
+    return { gameContext, newsContext };
+  }
 
   async function go() {
     const btn = document.getElementById('genBtn');
@@ -100,14 +137,51 @@
     errEl.classList.remove('on');
 
     try {
-      const res = await fetch('/api/recap', { method: 'POST', headers: {'Content-Type':'application/json'} });
+      const dateStr = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+      const { gameContext, newsContext } = await getESPN();
+
+      const prompt = `You are writing a fun daily Mets baseball recap email from a dad named Jason to his two kids at summer camp: Noah (age 15) and Emily (age 12). Both LOVE the New York Mets.
+
+Today: ${dateStr}
+
+METS GAME DATA:
+${gameContext}
+
+RECENT METS NEWS:
+${newsContext}
+
+Write a plain text email. No HTML, no markdown, no asterisks, no bullet symbols. Rules:
+- Line 1: "SUBJECT: [fun subject line]"
+- Blank line
+- Open: "Hey Noah and Emily!"
+- Lead with the score if available, or talk about the Mets season warmly if no game
+- Mention 1-2 news items conversationally
+- Include "METS MOOD OF THE DAY: [description] [X]/10"
+- End with a Mets trivia question or dad joke
+- Sign off warmly from Dad
+- Under 300 words, punchy and fun`;
+
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        }
+      );
+
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Server error ' + res.status);
-      if (!data.email) throw new Error('No email returned');
-      document.getElementById('emailBox').textContent = data.email;
+      if (!res.ok) throw new Error(data.error?.message || 'Gemini error ' + res.status);
+
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      if (!text) throw new Error('No text returned from Gemini');
+
+      document.getElementById('emailBox').textContent = text;
       loading.classList.remove('on');
       output.classList.add('on');
+
     } catch(e) {
+      console.error(e);
       loading.classList.remove('on');
       errEl.textContent = 'Error: ' + e.message;
       errEl.classList.add('on');
@@ -120,10 +194,10 @@
   function copyIt() {
     const text = document.getElementById('emailBox').textContent;
     const btn = document.getElementById('copyBtn');
-    navigator.clipboard.writeText(text).then(() => {
+    navigator.clipboard.writeText(text).then(()=>{
       btn.textContent = '✓ Copied!';
       btn.classList.add('ok');
-      setTimeout(() => { btn.textContent = 'Copy Email'; btn.classList.remove('ok'); }, 2500);
+      setTimeout(()=>{ btn.textContent='Copy Email'; btn.classList.remove('ok'); },2500);
     });
   }
 </script>
