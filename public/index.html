@@ -59,12 +59,12 @@
   <div class="dateline">
     <div class="dot"></div>
     <span id="dateDisplay"></span>
-    <span>·</span><span>Live ESPN + Gemini AI</span>
+    <span>·</span><span>Live ESPN Data</span>
   </div>
   <button class="btn" id="genBtn" onclick="go()">⚾ Generate Today's Recap</button>
   <div class="loading" id="loading">
     <div class="loading-title">Pulling from the dugout...</div>
-    <div class="loading-sub">Fetching scores &amp; writing the email</div>
+    <div class="loading-sub">Fetching today's Mets data...</div>
   </div>
   <div class="err" id="err"></div>
   <div class="output" id="output">
@@ -85,121 +85,220 @@
   </div>
 </div>
 <script>
-  const GEMINI_KEY = 'AIzaSyAb8RN6I-B96MHqQ6dvGJ6EShTU55CqozEEmCifFdK2YMFASDrw';
-  const PROXY = 'https://sports-proxy-a8md.onrender.com';
+const PROXY = 'https://sports-proxy-a8md.onrender.com';
+const NYM_ID = '21';
 
-  document.getElementById('dateDisplay').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+document.getElementById('dateDisplay').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
 
-  async function getESPN() {
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+const dadJokes = [
+  "Why did the Mets pitcher bring a ladder to the game? Because he heard the stakes were high!",
+  "What do you call a Mets fan who can count to 10? A manager!",
+  "Why don't Mets players ever get hot in the summer? Because they have so many fans!",
+  "Trivia: Which Mets pitcher threw the first no-hitter in Citi Field history? (Answer: Johan Santana, 2012!)",
+  "Trivia: What year did the Mets win their first World Series? (Answer: 1969 -- the Miracle Mets!)",
+  "Trivia: What is the Mets home stadium called? (Answer: Citi Field, opened in 2009!)",
+  "Why did the Mets fan bring string to the game? So he could tie the score!",
+  "Trivia: Who holds the Mets record for career home runs? (Answer: Darryl Strawberry with 252!)",
+];
+
+const winOpeners = [
+  "BIG news from Flushing --",
+  "Your boys did it again --",
+  "Let's GOOO Mets --",
+  "Break out the blue and orange --",
+  "Dad is doing a victory dance right now --",
+];
+
+const lossOpeners = [
+  "Tough one tonight, but we bounce back --",
+  "Not our night, but the Mets never quit --",
+  "Every champion has rough patches --",
+  "We'll get em tomorrow --",
+  "The Mets are built for comebacks --",
+];
+
+const offDayOpeners = [
+  "No game today, but plenty of Mets news --",
+  "The boys have the day off, but your dad doesn't --",
+  "Rest day for the Mets -- time to catch up on the latest --",
+];
+
+const moods = {
+  bigWin:   ["LET'S GOOO", "ON FIRE", "ELECTRIC", "ABSOLUTELY COOKING"],
+  win:      ["Feeling Good", "Solid", "Happy Dad", "Pumped Up"],
+  loss:     ["We Bounce Back", "Staying Positive", "Building Character"],
+  bigLoss:  ["Rough Night", "Tomorrow Is Another Day", "We Believe"],
+  offDay:   ["Steady", "Keeping the Faith", "Always Mets"],
+};
+
+function moodScore(type) {
+  return { bigWin: "9/10", win: "7/10", loss: "5/10", bigLoss: "3/10", offDay: "6/10" }[type];
+}
+
+async function fetchJSON(url) {
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    return await r.json();
+  } catch { return null; }
+}
+
+async function go() {
+  const btn = document.getElementById('genBtn');
+  const loading = document.getElementById('loading');
+  const output = document.getElementById('output');
+  const errEl = document.getElementById('err');
+
+  btn.disabled = true;
+  btn.textContent = 'Fetching...';
+  loading.classList.add('on');
+  output.classList.remove('on');
+  errEl.classList.remove('on');
+
+  try {
     const today = new Date();
     const espnDate = today.toISOString().slice(0,10).replace(/-/g,'');
-    let gameContext = 'No Mets game today (off day).';
-    let newsContext = 'No recent Mets news available.';
+    const dateStr = today.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
 
-    try {
-      const r = await fetch(`${PROXY}/espn?path=sports/baseball/mlb/scoreboard&dates=${espnDate}`);
-      if (r.ok) {
-        const j = await r.json();
-        const game = (j.events||[]).find(e=>e.competitions?.[0]?.competitors?.some(c=>c.team?.abbreviation==='NYM'));
-        if (game) {
-          const comp = game.competitions[0];
-          const home = comp.competitors.find(c=>c.homeAway==='home');
-          const away = comp.competitors.find(c=>c.homeAway==='away');
-          const status = comp.status?.type?.description || '';
-          const venue = comp.venue?.fullName || '';
-          gameContext = `${away.team.displayName} @ ${home.team.displayName}\nScore: ${away.team.displayName} ${away.score} - ${home.team.displayName} ${home.score}\nStatus: ${status}${venue?'\nVenue: '+venue:''}`;
-        }
-      }
-    } catch(e) { console.log('ESPN score:', e.message); }
+    // Fetch all data in parallel
+    const [scoreData, newsData, summaryData] = await Promise.all([
+      fetchJSON(`${PROXY}/espn?path=sports/baseball/mlb/scoreboard&dates=${espnDate}`),
+      fetchJSON(`${PROXY}/news/baseball/mlb/${NYM_ID}`),
+      fetchJSON(`${PROXY}/lastsummary/baseball/mlb/${NYM_ID}`)
+    ]);
 
-    try {
-      const r = await fetch(`${PROXY}/news/baseball/mlb/21`);
-      if (r.ok) {
-        const j = await r.json();
-        const arts = (j.articles||[]).slice(0,4);
-        if (arts.length) newsContext = arts.map((a,i)=>`${i+1}. ${a.headline}${a.description?' - '+a.description:''}`).join('\n');
-      }
-    } catch(e) { console.log('ESPN news:', e.message); }
-
-    return { gameContext, newsContext };
-  }
-
-  async function go() {
-    const btn = document.getElementById('genBtn');
-    const loading = document.getElementById('loading');
-    const output = document.getElementById('output');
-    const errEl = document.getElementById('err');
-
-    btn.disabled = true;
-    btn.textContent = 'Fetching...';
-    loading.classList.add('on');
-    output.classList.remove('on');
-    errEl.classList.remove('on');
-
-    try {
-      const dateStr = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
-      const { gameContext, newsContext } = await getESPN();
-
-      const prompt = `You are writing a fun daily Mets baseball recap email from a dad named Jason to his two kids at summer camp: Noah (age 15) and Emily (age 12). Both LOVE the New York Mets.
-
-Today: ${dateStr}
-
-METS GAME DATA:
-${gameContext}
-
-RECENT METS NEWS:
-${newsContext}
-
-Write a plain text email. No HTML, no markdown, no asterisks, no bullet symbols. Rules:
-- Line 1: "SUBJECT: [fun subject line]"
-- Blank line
-- Open: "Hey Noah and Emily!"
-- Lead with the score if available, or talk about the Mets season warmly if no game
-- Mention 1-2 news items conversationally
-- Include "METS MOOD OF THE DAY: [description] [X]/10"
-- End with a Mets trivia question or dad joke
-- Sign off warmly from Dad
-- Under 300 words, punchy and fun`;
-
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-        }
+    // Parse game
+    let game = null;
+    if (scoreData?.events) {
+      game = scoreData.events.find(e =>
+        e.competitions?.[0]?.competitors?.some(c => c.team?.abbreviation === 'NYM')
       );
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error?.message || 'Gemini error ' + res.status);
-
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      if (!text) throw new Error('No text returned from Gemini');
-
-      document.getElementById('emailBox').textContent = text;
-      loading.classList.remove('on');
-      output.classList.add('on');
-
-    } catch(e) {
-      console.error(e);
-      loading.classList.remove('on');
-      errEl.textContent = 'Error: ' + e.message;
-      errEl.classList.add('on');
     }
 
-    btn.disabled = false;
-    btn.textContent = '⚾ Generate Today\'s Recap';
+    // Parse news headlines
+    const headlines = (newsData?.articles || []).slice(0, 3).map(a => a.headline).filter(Boolean);
+
+    // Parse last game summary / key moments
+    const keyMoments = (summaryData?.keyMoments || []).slice(0, 2).map(m => m?.text || '').filter(Boolean);
+
+    // Build email
+    let subject, opener, gameSection, moodType, moodPhrase;
+
+    if (game) {
+      const comp = game.competitions[0];
+      const home = comp.competitors.find(c => c.homeAway === 'home');
+      const away = comp.competitors.find(c => c.homeAway === 'away');
+      const status = comp.status?.type?.description || '';
+      const completed = comp.status?.type?.completed;
+      const nymComp = comp.competitors.find(c => c.team?.abbreviation === 'NYM');
+      const oppComp = comp.competitors.find(c => c.team?.abbreviation !== 'NYM');
+      const nymScore = parseInt(nymComp?.score || '0');
+      const oppScore = parseInt(oppComp?.score || '0');
+      const oppName = oppComp?.team?.displayName || 'the opponent';
+      const atHome = nymComp?.homeAway === 'home';
+      const diff = Math.abs(nymScore - oppScore);
+
+      if (completed) {
+        const won = nymScore > oppScore;
+        moodType = won ? (diff >= 5 ? 'bigWin' : 'win') : (diff >= 5 ? 'bigLoss' : 'loss');
+        subject = won
+          ? `Mets WIN ${nymScore}-${oppScore}! ${diff >= 5 ? 'Dominant!' : 'Got the W!'}`
+          : `Mets drop one ${nymScore}-${oppScore} -- we bounce back`;
+        opener = pick(won ? winOpeners : lossOpeners);
+        gameSection = `FINAL SCORE: NEW YORK METS ${nymScore}, ${oppName.toUpperCase()} ${oppScore}
+
+The Mets played ${atHome ? 'at home at Citi Field' : 'on the road'} tonight against the ${oppName}. Final score: METS ${nymScore}, ${oppName} ${oppScore}.${won ? ` Your boys got the W!` : ` Tough loss, but we keep moving.`}`;
+
+        if (keyMoments.length > 0) {
+          gameSection += '\n\nHIGHLIGHTS:\n' + keyMoments.map(m => '-- ' + m).join('\n');
+        }
+      } else {
+        // Game in progress or upcoming
+        const inning = comp.status?.period;
+        const isLive = status.toLowerCase().includes('in progress') || status.toLowerCase().includes('end of');
+        moodType = 'offDay';
+        if (isLive) {
+          const leading = nymScore > oppScore;
+          subject = leading
+            ? `Mets leading ${nymScore}-${oppScore} LIVE right now!`
+            : `Mets game in progress -- ${nymScore}-${oppScore}`;
+          opener = leading ? pick(winOpeners) : "Game is on right now --";
+          gameSection = `LIVE GAME UPDATE: METS ${nymScore}, ${oppName.toUpperCase()} ${oppScore} -- ${status}${inning ? ` (Inning ${inning})` : ''}
+
+The Mets are playing ${atHome ? 'at home' : 'on the road'} against the ${oppName} RIGHT NOW. Check the score on the MLB app if you can get to a phone!`;
+        } else {
+          subject = `Mets play the ${oppName} today -- let's go!`;
+          opener = pick(offDayOpeners);
+          gameSection = `TONIGHT'S GAME: METS vs. ${oppName.toUpperCase()}
+
+The Mets have a game scheduled ${atHome ? 'at Citi Field' : 'on the road'} against the ${oppName} today. Cheer them on from camp!`;
+        }
+      }
+    } else {
+      moodType = 'offDay';
+      subject = "Your daily Mets update from home base";
+      opener = pick(offDayOpeners);
+      gameSection = "No Mets game on the schedule today -- the boys are resting up for the next one!";
+    }
+
+    moodPhrase = pick(moods[moodType]);
+
+    // News section
+    let newsSection = '';
+    if (headlines.length > 0) {
+      newsSection = '\n\nMETS NEWS:\n' + headlines.map((h,i) => `${i+1}. ${h}`).join('\n');
+    }
+
+    // Dad joke / trivia
+    const joke = pick(dadJokes);
+
+    // Assemble full email
+    const email = `SUBJECT: ${subject}
+
+Hey Noah and Emily!
+
+${opener}
+
+${gameSection}${newsSection}
+
+---
+METS MOOD OF THE DAY: ${moodPhrase} -- ${moodScore(moodType)}
+---
+
+DAD'S CORNER:
+${joke}
+
+Miss you both like crazy. Keep representing the blue and orange up there at camp -- I want to hear everyone at Schodack knows who the Mets are!
+
+Love you to Citi Field and back,
+Dad ⚾`;
+
+    document.getElementById('emailBox').textContent = email;
+    loading.classList.remove('on');
+    output.classList.add('on');
+
+  } catch(e) {
+    console.error(e);
+    loading.classList.remove('on');
+    errEl.textContent = 'Error: ' + e.message;
+    errEl.classList.add('on');
   }
 
-  function copyIt() {
-    const text = document.getElementById('emailBox').textContent;
-    const btn = document.getElementById('copyBtn');
-    navigator.clipboard.writeText(text).then(()=>{
-      btn.textContent = '✓ Copied!';
-      btn.classList.add('ok');
-      setTimeout(()=>{ btn.textContent='Copy Email'; btn.classList.remove('ok'); },2500);
-    });
-  }
+  btn.disabled = false;
+  btn.textContent = '⚾ Generate Today\'s Recap';
+}
+
+function copyIt() {
+  const text = document.getElementById('emailBox').textContent;
+  const btn = document.getElementById('copyBtn');
+  navigator.clipboard.writeText(text).then(()=>{
+    btn.textContent = '✓ Copied!';
+    btn.classList.add('ok');
+    setTimeout(()=>{ btn.textContent='Copy Email'; btn.classList.remove('ok'); },2500);
+  });
+}
 </script>
 </body>
 </html>
