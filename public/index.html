@@ -37,10 +37,10 @@
   .card-name.noah { color:#6b9dff; }
   .card-name.emily { color:var(--orange); }
   .card-age { font-family:'IBM Plex Mono',monospace; font-size:10px; color:rgba(248,244,239,.4); letter-spacing:2px; }
-  .copy-btn { padding:6px 14px; background:transparent; border:1px solid rgba(255,255,255,.2); color:rgba(255,255,255,.6); border-radius:3px; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:1px; cursor:pointer; transition:all .2s; text-transform:uppercase; }
+  .copy-btn { padding:6px 14px; background:transparent; border:1px solid rgba(255,255,255,.2); color:rgba(255,255,255,.6); border-radius:3px; font-family:'IBM Plex Mono',monospace; font-size:11px; cursor:pointer; transition:all .2s; text-transform:uppercase; }
   .copy-btn:hover { border-color:var(--orange); color:var(--orange); }
   .copy-btn.ok { background:#4ade80; border-color:#4ade80; color:white; }
-  .email-box { padding:18px; font-family:'IBM Plex Mono',monospace; font-size:12px; line-height:1.75; color:var(--cream); white-space:pre-wrap; word-break:break-word; min-height:400px; max-height:650px; overflow-y:auto; }
+  .email-box { padding:18px; font-family:'IBM Plex Mono',monospace; font-size:12px; line-height:1.8; color:var(--cream); white-space:pre-wrap; word-break:break-word; min-height:400px; max-height:700px; overflow-y:auto; }
   .output { display:none; }
   .output.on { display:block; }
   .instructions { margin-top:20px; padding:18px 22px; background:rgba(0,45,114,.2); border:1px solid rgba(0,45,114,.5); border-radius:4px; }
@@ -48,7 +48,7 @@
   .instructions ol { padding-left:18px; font-size:13px; color:rgba(248,244,239,.7); line-height:2.2; }
   .instructions a { color:#6b9dff; }
   .regen { text-align:center; margin-top:18px; }
-  .regen-btn { background:transparent; border:1px solid rgba(255,255,255,.15); color:rgba(255,255,255,.4); padding:8px 20px; border-radius:3px; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:2px; cursor:pointer; transition:all .2s; text-transform:uppercase; }
+  .regen-btn { background:transparent; border:1px solid rgba(255,255,255,.15); color:rgba(255,255,255,.4); padding:8px 20px; border-radius:3px; font-family:'IBM Plex Mono',monospace; font-size:11px; cursor:pointer; transition:all .2s; text-transform:uppercase; }
   .regen-btn:hover { border-color:var(--orange); color:var(--orange); }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
@@ -72,7 +72,7 @@
   <button class="btn" id="genBtn" onclick="go()">⚾ Generate Today's Emails</button>
   <div class="loading" id="loading">
     <div class="loading-title">Pulling from the dugout...</div>
-    <div class="loading-sub">Fetching today's Mets data...</div>
+    <div class="loading-sub">Fetching scores, stats &amp; news...</div>
   </div>
   <div class="err" id="err"></div>
   <div class="output" id="output">
@@ -108,43 +108,43 @@ const PROXY = 'https://sports-proxy-a8md.onrender.com';
 const NYM_ID = '21';
 
 document.getElementById('dateDisplay').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
-
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 
 const noahOpeners = {
-  bigWin:  ["Absolute FILTH from the Mets tonight --","Your boys went OFF tonight --","Dad almost lost his voice yelling at the TV --","This is why we're Mets fans --"],
+  bigWin:  ["Absolute FILTH from the Mets tonight --","Your boys went OFF tonight --","Dad almost lost his voice --","This is why we're Mets fans --"],
   win:     ["Solid W for the good guys --","Mets get it done --","Another one in the win column --","Your boys came through --"],
-  upcoming:["Big game today -- here's what you need to know --","Game day for the Mets -- let's break it down --","Your pre-game briefing is here --"],
-  loss:    ["Tough loss but we bounce back --","Not our night -- the lineup went cold --","We'll get em tomorrow --","Brutal one tonight --"],
-  bigLoss: ["That one hurt to watch --","Rough night at the ballpark --","Some nights the baseball gods are just against you --"],
+  upcoming:["Big game today -- here's your full briefing --","Game day for the Mets -- let's break it down --","Pre-game breakdown is here --"],
+  live:    ["Game is happening RIGHT NOW -- here's where we stand --","Live update from Citi Field --"],
+  loss:    ["Tough loss but we bounce back --","Not our night -- the lineup went cold --","We'll get em tomorrow --"],
+  bigLoss: ["That one hurt to watch --","Rough night at the ballpark --","Some nights the baseball gods are against you --"],
   offDay:  ["Day off for the Mets -- let's review --","No game today, but plenty to break down --"],
 };
 const emilyOpeners = {
-  bigWin:  ["AMAZING news from the Mets!!","Your team is ON FIRE right now!!","Dad did a happy dance in the living room!!","BEST. DAY. EVER. (for a Mets fan!!)"],
-  win:     ["Great news from your favorite team!!","The Mets came through tonight!!","Happy dad over here!!","Good things are happening!!"],
+  bigWin:  ["AMAZING news from the Mets!!","Your team is ON FIRE right now!!","Dad did a happy dance in the living room!!","BEST DAY EVER for a Mets fan!!"],
+  win:     ["Great news from your favorite team!!","The Mets came through tonight!!","Happy dad over here!!"],
   upcoming:["It's GAME DAY for the Mets!!","Big game today -- cheer them on from camp!!","The Mets play tonight -- let's get excited!!"],
-  loss:    ["The Mets had a tough night, but they never give up!!","Not our night, but tomorrow is a new day!!","Even champions have rough patches -- we still love our Mets!!"],
-  bigLoss: ["Ugh, tough one tonight -- but we believe!!","The Mets will bounce back, I just know it!!"],
+  live:    ["THE METS ARE PLAYING RIGHT NOW!!","Live Mets action happening as I write this!!"],
+  loss:    ["The Mets had a tough night, but they never give up!!","Not our night, but tomorrow is a new day!!"],
+  bigLoss: ["Ugh, tough one tonight -- but we believe!!","The Mets will bounce back, I know it!!"],
   offDay:  ["No game today but I still have Mets news for you!!","Rest day for the Mets -- here's what's going on!!"],
 };
-
-const noahMoods =  { bigWin:"ABSOLUTELY SENDING IT -- 9/10", win:"Solid W -- 7/10", upcoming:"Locked In -- 7/10", loss:"Frustrating -- 4/10", bigLoss:"Brutal -- 2/10", offDay:"Steady -- 6/10" };
-const emilyMoods = { bigWin:"BEST DAY EVER!! -- 10/10!!", win:"Really Happy!! -- 8/10", upcoming:"SO EXCITED FOR THE GAME!! -- 8/10", loss:"A little sad but hopeful -- 5/10", bigLoss:"Sending extra love to the Mets -- 3/10", offDay:"Feeling good!! -- 7/10" };
+const noahMoods =  { bigWin:"ABSOLUTELY SENDING IT -- 9/10", win:"Solid W -- 7/10", upcoming:"Locked In -- 7/10", live:"On Edge -- 7/10", loss:"Frustrating -- 4/10", bigLoss:"Brutal -- 2/10", offDay:"Steady -- 6/10" };
+const emilyMoods = { bigWin:"BEST DAY EVER!! -- 10/10!!", win:"Really Happy!! -- 8/10", upcoming:"SO EXCITED!! -- 8/10", live:"CAN'T STOP CHECKING THE SCORE!! -- 8/10", loss:"A little sad but hopeful -- 5/10", bigLoss:"Sending the Mets extra love -- 3/10", offDay:"Feeling good!! -- 7/10" };
 
 const noahJokes = [
-  "Trivia: Who holds the Mets single-season strikeout record? (Answer: Tom Seaver with 289 in 1971)",
-  "Trivia: What was the Mets' record in their 1962 debut season? (Answer: 40-120 -- worst in modern history -- and we still love them!)",
-  "Trivia: How many no-hitters have been thrown in Mets history? (Answer: Just one -- Johan Santana in 2012!)",
-  "Hot take to debate with your bunk: best Mets player ever -- Seaver, Piazza, deGrom, or someone from this squad?",
-  "Trivia: Who holds the Mets career home run record? (Answer: Darryl Strawberry with 252!)",
-  "Trivia: What year did the Mets win their first World Series? (Answer: 1969 -- the Miracle Mets!)",
+  "Trivia: Who holds the Mets single-season strikeout record? (Tom Seaver -- 289 Ks in 1971)",
+  "Trivia: What was the Mets' record in their 1962 debut season? (40-120 -- worst in modern history -- and we still love them!)",
+  "Trivia: How many no-hitters in Mets history? (Just one -- Johan Santana, June 1, 2012)",
+  "Hot take: best Mets player ever -- Seaver, Piazza, deGrom, or someone from this squad?",
+  "Trivia: Mets career home run leader? (Darryl Strawberry -- 252)",
+  "Trivia: What year did the Mets win their first World Series? (1969 -- the Miracle Mets!)",
 ];
 const emilyJokes = [
-  "Mets fun fact: The Mets colors are blue and orange because they combined the colors of the two NYC teams that left -- Dodgers blue and Giants orange. How cool is that??",
-  "Did you know? The Mets mascot Mr. Met has been around since 1964 -- one of the first mascots in baseball!!",
-  "Fun fact: Citi Field has a giant apple that pops up from behind the wall whenever a Met hits a home run. It's called the Home Run Apple!!",
-  "Did you know the 1969 Mets were called the 'Miracle Mets' because nobody believed they could win -- and they won the whole World Series!! Never count out the Mets!!",
-  "Mets trivia: Bo Bichette, one of our newest Mets, wore #11 in Toronto. He is one of the most exciting players in baseball!! Ask your counselors if they know who he is!!",
+  "Mets fun fact: The blue and orange come from combining the Dodgers blue and Giants orange -- two NYC teams that left for California. How cool!!",
+  "Did you know? Mr. Met has been around since 1964 -- one of the very first mascots in baseball!!",
+  "Fun fact: Citi Field has a giant Home Run Apple that pops up every time a Met hits a homer!!",
+  "The 1969 Mets were called the Miracle Mets because NOBODY believed they could win -- and they won the World Series!! Never count out the Mets!!",
+  "Bo Bichette, one of our exciting new Mets this year, is one of the best shortstops in baseball!! Ask your counselors if they know who he is!!",
 ];
 
 async function fetchJSON(url) {
@@ -154,25 +154,18 @@ async function fetchJSON(url) {
 async function findMetsGame() {
   const today = new Date();
   const espnDate = today.toISOString().slice(0,10).replace(/-/g,'');
-
-  // Fetch both with-date and without-date to catch scheduled evening games
   const [withDate, withoutDate] = await Promise.all([
     fetchJSON(`${PROXY}/espn?path=sports/baseball/mlb/scoreboard&dates=${espnDate}`),
     fetchJSON(`${PROXY}/espn?path=sports/baseball/mlb/scoreboard`)
   ]);
-
-  // Merge events, deduplicate by id
   const seen = new Set();
-  const allEvents = [];
+  const all = [];
   for (const d of [withDate, withoutDate]) {
     for (const e of (d?.events || [])) {
-      if (!seen.has(e.id)) { seen.add(e.id); allEvents.push(e); }
+      if (!seen.has(e.id)) { seen.add(e.id); all.push(e); }
     }
   }
-
-  return allEvents.find(e =>
-    e.competitions?.[0]?.competitors?.some(c => c.team?.abbreviation === 'NYM')
-  ) || null;
+  return all.find(e => e.competitions?.[0]?.competitors?.some(c => c.team?.abbreviation === 'NYM')) || null;
 }
 
 function parseGame(game) {
@@ -193,105 +186,105 @@ function parseGame(game) {
   const oppAbbr = opp?.team?.abbreviation || 'OPP';
   const oppRecord = opp?.records?.[0]?.summary || '';
   const nymRecord = nym?.records?.[0]?.summary || '';
-
-  // Game time
   let gameTime = '';
-  try {
-    const d = new Date(comp.date);
-    gameTime = d.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit', timeZoneName:'short' });
-  } catch {}
-
+  try { const d = new Date(comp.date); gameTime = d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZoneName:'short'}); } catch {}
   let moodType;
   if (isScheduled) moodType = 'upcoming';
-  else if (isLive) moodType = won ? 'win' : 'loss';
-  else if (completed) moodType = won ? (diff >= 5 ? 'bigWin' : 'win') : (diff >= 5 ? 'bigLoss' : 'loss');
+  else if (isLive) moodType = 'live';
+  else if (completed) moodType = won ? (diff>=5?'bigWin':'win') : (diff>=5?'bigLoss':'loss');
   else moodType = 'offDay';
-
-  return { nym, opp, completed, isLive, isScheduled, nymScore, oppScore, won, diff, atHome, oppName, oppAbbr, oppRecord, nymRecord, gameTime, moodType, statusDesc, comp };
+  return { nym, opp, completed, isLive, isScheduled, nymScore, oppScore, won, diff, atHome, oppName, oppAbbr, oppRecord, nymRecord, gameTime, moodType, statusDesc, comp, inning: comp.status?.period };
 }
 
-function gameTextNoah(g) {
-  if (!g) return { moodType:'offDay', text:'No game on the schedule today. Good time to check the standings.' };
+function formatBoxscore(detail, forNoah) {
+  if (!detail?.found || !detail.teamStats?.length) return '';
+  const nym = detail.teamStats.find(t => t.isNYM);
+  const opp = detail.teamStats.find(t => !t.isNYM);
+  if (!nym) return '';
 
-  let text = '';
-  if (g.completed) {
-    text += `FINAL: NYM ${g.nymScore}, ${g.oppAbbr} ${g.oppScore} -- ${g.won ? 'W' : 'L'}\n`;
-    text += `${g.atHome ? 'Home' : 'Away'} game vs. the ${g.oppName}`;
-    if (g.nymRecord) text += ` | Mets record: ${g.nymRecord}`;
-    text += `\n\n`;
-    text += g.won
-      ? `Mets take it ${g.nymScore}-${g.oppScore}. ${g.diff >= 5 ? 'Dominant performance tonight.' : 'Ground out the win -- any W counts.'}`
-      : `Dropped this one ${g.nymScore}-${g.oppScore}. ${g.diff >= 5 ? 'Rough night all around -- pitching and offense both struggled.' : 'Close game, just not enough offense.'} We bounce back.`;
-  } else if (g.isLive) {
-    text += `LIVE: NYM ${g.nymScore}, ${g.oppAbbr} ${g.oppScore} -- ${g.statusDesc}\n`;
-    text += `Game is going RIGHT NOW vs. the ${g.oppName}. Check the MLB app for live updates!`;
-  } else {
-    text += `TONIGHT: NYM vs. ${g.oppAbbr}${g.gameTime ? ' -- ' + g.gameTime : ''}\n`;
-    text += `The Mets host${g.atHome ? '' : ' the'} ${g.oppName}${g.atHome ? ' at Citi Field' : ' on the road'}`;
-    if (g.oppRecord) text += ` (${g.oppName} are ${g.oppRecord})`;
-    text += `.\n\nWatch the lineup, see how the rotation sets up, and track the bullpen situation. This is a game we need.`;
-  }
-  return { moodType: g.moodType, text };
-}
+  let out = '';
 
-function gameTextEmily(g) {
-  if (!g) return { moodType:'offDay', text:'No Mets game today!! The players are resting up for the next one!!' };
+  if (forNoah) {
+    // Full box score style for Noah
+    out += `\nFINAL: ${detail.away.abbr} ${detail.away.score}, ${detail.home.abbr} ${detail.home.score}`;
+    if (detail.venue) out += ` -- ${detail.venue}`;
+    out += '\n';
 
-  let text = '';
-  if (g.completed) {
-    text += `FINAL SCORE: METS ${g.nymScore}, ${g.oppName.toUpperCase()} ${g.oppScore}\n\n`;
-    text += g.won
-      ? `Your Mets ${g.diff >= 5 ? 'absolutely crushed' : 'beat'} the ${g.oppName} tonight!! Final score: METS ${g.nymScore}, ${g.oppName} ${g.oppScore}!! ${g.diff >= 5 ? 'What an incredible game!!' : 'So exciting!!'}`
-      : `The Mets played really hard but lost to the ${g.oppName} by ${g.oppScore}-${g.nymScore}. ${g.diff >= 5 ? 'It was a tough night, but they will come back stronger!!' : 'It was really close though!!'} We still love our Mets no matter what!!`;
-  } else if (g.isLive) {
-    text += `THE METS ARE PLAYING RIGHT NOW!!\n\n`;
-    text += `Live score: METS ${g.nymScore}, ${g.oppName} ${g.oppScore} -- ${g.statusDesc}!! Ask your counselor if you can check the score -- this is happening right now!!`;
-  } else {
-    text += `GAME DAY!! The Mets play the ${g.oppName} today${g.gameTime ? ' at ' + g.gameTime : ' tonight'}!!\n\n`;
-    text += `The game is ${g.atHome ? 'at Citi Field in New York' : 'on the road'}. Send all your good Mets energy from camp today!! Every cheer helps!! GO METS!!`;
-  }
-  return { moodType: g.moodType, text };
-}
-
-function highlightsNoah(summaryData) {
-  const moments = (summaryData?.keyMoments || []).slice(0, 4).map(m => m?.text || '').filter(Boolean);
-  const plays = (summaryData?.highlights || []).slice(0, 3).map(h => h?.text || '').filter(Boolean);
-  const all = [...new Set([...moments, ...plays])].filter(Boolean);
-  if (!all.length) return '';
-  return '\nKEY MOMENTS:\n' + all.map(m => `-- ${m}`).join('\n') + '\n';
-}
-
-function highlightsEmily(summaryData) {
-  const moments = (summaryData?.keyMoments || []).slice(0, 3).map(m => m?.text || '').filter(Boolean);
-  const plays = (summaryData?.highlights || []).slice(0, 2).map(h => h?.text || '').filter(Boolean);
-  const all = [...new Set([...moments, ...plays])].filter(Boolean);
-  if (!all.length) return '';
-  return '\nCOOL MOMENTS FROM THE LAST GAME:\n' + all.map(m => `-- ${m}`).join('\n') + '\n';
-}
-
-function newsNoah(articles) {
-  if (!articles.length) return '';
-  let out = '\nMETS NEWS & NOTES:\n';
-  articles.slice(0, 3).forEach((a, i) => {
-    out += `\n${i + 1}. ${a.headline}\n`;
-    if (a.description) out += `   ${a.description}\n`;
-    if (a.story) {
-      const clean = a.story.replace(/<[^>]+>/g,'').trim();
-      if (clean.length > 20) out += `   ${clean.slice(0, 350).trim()}${clean.length > 350 ? '...' : ''}\n`;
+    // Scoring plays
+    if (detail.scoringPlays?.length) {
+      out += '\nSCORING PLAYS:\n';
+      detail.scoringPlays.forEach(p => {
+        out += `-- ${p.text}${p.score ? ' (' + p.score + ')' : ''}\n`;
+      });
     }
-  });
+
+    // NYM batting
+    const nymHitters = nym.hitters.filter(h => h.line && !h.line.includes('0-'));
+    if (nymHitters.length) {
+      out += '\nMETS BATTING:\n';
+      nymHitters.slice(0, 8).forEach(h => { out += `-- ${h.line}\n`; });
+    }
+
+    // NYM pitching
+    if (nym.pitchers.length) {
+      out += '\nMETS PITCHING:\n';
+      nym.pitchers.forEach(p => { out += `-- ${p.line}\n`; });
+    }
+
+  } else {
+    // Emily -- simpler, hero moments only
+    const stars = nym.hitters.filter(h => h.line.includes('HR') || h.line.includes('RBI'));
+    const goodHitters = nym.hitters.filter(h => {
+      const m = h.line.match(/(\d+)-(\d+)/);
+      return m && parseInt(m[1]) >= 2;
+    });
+    const heroes = [...new Set([...stars, ...goodHitters])].slice(0, 3);
+
+    if (heroes.length) {
+      out += '\nMETS STARS FROM LAST NIGHT:\n';
+      heroes.forEach(h => { out += `-- ${h.line}\n`; });
+    }
+
+    // Pitcher of note
+    const sp = nym.pitchers[0];
+    if (sp) out += `\nOn the mound: ${sp.line}\n`;
+  }
+
+  // Key moments
+  if (detail.keyMoments?.length) {
+    out += forNoah ? '\nKEY MOMENTS:\n' : '\nEXCITING MOMENTS:\n';
+    detail.keyMoments.slice(0, forNoah ? 4 : 2).forEach(m => { out += `-- ${m}\n`; });
+  }
+
   return out;
 }
 
-function newsEmily(articles) {
+function formatNews(articles, forNoah) {
   if (!articles.length) return '';
-  let out = '\nHERE IS WHAT IS HAPPENING WITH YOUR METS:\n';
-  articles.slice(0, 2).forEach((a, i) => {
-    out += `\n${i + 1}. ${a.headline}\n`;
+
+  // Filter out generic/non-story articles
+  const filtered = articles.filter(a => {
+    const h = (a.headline || '').toLowerCase();
+    return !h.includes('game highlights') && !h.includes('tracker') && !h.includes('vs.');
+  });
+  const toShow = (filtered.length ? filtered : articles).slice(0, forNoah ? 3 : 2);
+
+  if (!toShow.length) return '';
+
+  let out = forNoah ? '\nMETS NEWS & NOTES:\n' : '\nMETS NEWS:\n';
+  toShow.forEach((a, i) => {
+    out += `\n${i+1}. ${a.headline}\n`;
     if (a.description) out += `   ${a.description}\n`;
-    // Add a little friendly context for Emily
-    if (a.description && a.description.toLowerCase().includes('bichette')) {
-      out += `   (That is Bo Bichette -- one of our exciting new Mets this year!!)\n`;
+    if (a.story) {
+      const clean = a.story.replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim();
+      if (clean.length > 30) {
+        // Get first 2 sentences or 500 chars for Noah, 250 for Emily
+        const limit = forNoah ? 500 : 250;
+        const sentences = clean.match(/[^.!?]+[.!?]+/g) || [];
+        const excerpt = sentences.slice(0, forNoah ? 3 : 2).join(' ').trim();
+        const text = excerpt.length > 20 ? excerpt : clean.slice(0, limit);
+        out += `   ${text}${text.length >= limit ? '...' : ''}\n`;
+      }
     }
   });
   return out;
@@ -312,31 +305,49 @@ async function go() {
   try {
     const dateStr = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
 
-    const [gameRaw, newsData, summaryData] = await Promise.all([
+    const [gameRaw, newsData, detail] = await Promise.all([
       findMetsGame(),
       fetchJSON(`${PROXY}/news/baseball/mlb/${NYM_ID}`),
-      fetchJSON(`${PROXY}/lastsummary/baseball/mlb/${NYM_ID}`)
+      fetchJSON(`${PROXY}/gamedetail/baseball/mlb/${NYM_ID}`)
     ]);
 
     const g = parseGame(gameRaw);
     const articles = newsData?.articles || [];
+    const moodType = g?.moodType || 'offDay';
 
-    const { moodType: moodN, text: gameN } = gameTextNoah(g);
-    const { moodType: moodE, text: gameE } = gameTextEmily(g);
-    const moodType = moodN;
+    // Game description sections
+    let gameDescNoah = '', gameDescEmily = '';
 
-    const hlN = g?.completed || g?.isLive ? highlightsNoah(summaryData) : '';
-    const hlE = g?.completed || g?.isLive ? highlightsEmily(summaryData) : '';
+    if (!g) {
+      gameDescNoah = 'No game on the schedule today. Good time to check the standings and see where we are in the NL East.';
+      gameDescEmily = 'No Mets game today!! The players are resting up for the next one!!';
+    } else if (g.isScheduled) {
+      gameDescNoah = `TONIGHT: NYM vs. ${g.oppAbbr}${g.gameTime ? ' -- ' + g.gameTime : ''}\n${g.atHome ? 'Home game at Citi Field' : 'Road game'} vs. the ${g.oppName}${g.oppRecord ? ' (' + g.oppRecord + ')' : ''}.\nMets are ${g.nymRecord || 'fighting for position'} in the NL East. This is a game we need.`;
+      gameDescEmily = `GAME DAY!! The Mets play the ${g.oppName} today${g.gameTime ? ' at ' + g.gameTime : ' tonight'}!!\nThe game is ${g.atHome ? 'at Citi Field in New York' : 'on the road'}. Send all your good Mets energy from camp!! Every cheer helps!! GO METS!!`;
+    } else if (g.isLive) {
+      gameDescNoah = `LIVE: NYM ${g.nymScore}, ${g.oppAbbr} ${g.oppScore} -- ${g.statusDesc}${g.inning ? ' | Inning ' + g.inning : ''}\nGame is going RIGHT NOW vs. the ${g.oppName}. Check the MLB app!`;
+      gameDescEmily = `THE METS ARE PLAYING RIGHT NOW!!\nLive score: METS ${g.nymScore}, ${g.oppName} ${g.oppScore} -- ${g.statusDesc}!! Ask your counselor if you can check the score!!`;
+    } else if (g.completed) {
+      gameDescNoah = `FINAL: NYM ${g.nymScore}, ${g.oppAbbr} ${g.oppScore} -- ${g.won ? 'W' : 'L'}\n${g.atHome ? 'Home' : 'Away'} vs. the ${g.oppName}${g.nymRecord ? ' | Mets: ' + g.nymRecord : ''}\n${g.won ? `Mets take it ${g.nymScore}-${g.oppScore}. ${g.diff>=5?'Dominant. Weren\'t even close.':'Ground out the W -- any win counts.'}` : `Dropped this one ${g.nymScore}-${g.oppScore}. ${g.diff>=5?'Rough all around.':'Close game, not enough offense.'} We bounce back.`}`;
+      gameDescEmily = g.won
+        ? `METS WIN!! Final score: METS ${g.nymScore}, ${g.oppName} ${g.oppScore}!!\nYour boys ${g.diff>=5?'absolutely crushed it':'came through in the end'}!! ${g.diff>=5?'What a performance!!':'So exciting!!'}`
+        : `The Mets lost to the ${g.oppName} by ${g.oppScore}-${g.nymScore} tonight. ${g.diff>=5?'It was a tough night':'It was really close though'}, but we love our Mets no matter what!! They will bounce back tomorrow!!`;
+    }
+
+    const boxNoah = (g?.completed || g?.isLive) ? formatBoxscore(detail, true) : '';
+    const boxEmily = (g?.completed || g?.isLive) ? formatBoxscore(detail, false) : '';
+    const newsNoah = formatNews(articles, true);
+    const newsEmily = formatNews(articles, false);
 
     const noahEmail =
-`SUBJECT: Mets ${moodType==='upcoming'?'Game Day':'Update'} -- ${dateStr}
+`SUBJECT: Mets ${moodType==='upcoming'?'Game Day':moodType==='live'?'Live Update':'Recap'} -- ${dateStr}
 
 Hey Noah,
 
 ${pick(noahOpeners[moodType] || noahOpeners.offDay)}
 
-${gameN}
-${hlN}${newsNoah(articles)}
+${gameDescNoah}
+${boxNoah}${newsNoah}
 ---
 METS MOOD: ${noahMoods[moodType]}
 ---
@@ -349,14 +360,14 @@ Keep repping the blue and orange. Miss you man.
 Love, Dad`;
 
     const emilyEmail =
-`SUBJECT: Your Mets Update from Dad!! ${moodType==='bigWin'||moodType==='win'?'Great News!!' : moodType==='upcoming'?'Game Day!!' : ''}
+`SUBJECT: Your Mets ${moodType==='upcoming'?'Game Day':moodType==='live'?'Live Update!!':'Update'} from Dad!! ${moodType==='bigWin'||moodType==='win'?'Great News!!' : ''}
 
 Hi Emily!!
 
 ${pick(emilyOpeners[moodType] || emilyOpeners.offDay)}
 
-${gameE}
-${hlE}${newsEmily(articles)}
+${gameDescEmily}
+${boxEmily}${newsEmily}
 ---
 METS MOOD OF THE DAY: ${emilyMoods[moodType]}
 ---
@@ -391,7 +402,7 @@ function copyIt(boxId, btnId) {
   navigator.clipboard.writeText(text).then(() => {
     btn.textContent = '✓ Copied!';
     btn.classList.add('ok');
-    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('ok'); }, 2500);
+    setTimeout(() => { btn.textContent='Copy'; btn.classList.remove('ok'); }, 2500);
   });
 }
 </script>
