@@ -243,9 +243,9 @@ function filterNews(articles, hasCompletedGame) {
       const h = (a.headline || '').toLowerCase();
       const isMetsCentric = /\bmets\b|nym/.test(h);
       if (!isMetsCentric) return false;
-      // Exclude headlines where a non-Mets team is the clear subject beating the Mets
-      // e.g. "Padres halt losing streak with win over Mets"
-      const isOpponentStory = /^[^|]*\b(yankees|red sox|braves|phillies|marlins|nationals|cubs|brewers|cardinals|pirates|reds|padres|dodgers|giants|rockies|diamondbacks|astros|rangers|angels|athletics|mariners|rays|blue jays|orioles|royals|twins|white sox|tigers|guardians|brewers)\b[^|]*\b(beats|beat|defeats|defeat|tops|halts|stops|snaps|rallies|edges|outduels|blanks|routs|wins|takes)\b/i.test(a.headline || '');
+      // Exclude headlines where the story is really about the opponent beating the Mets
+      // Catches both "Padres halt..." and "Freddy Fermin homer helps Padres beat Mets"
+      const isOpponentStory = /\b(yankees|red sox|braves|phillies|marlins|nationals|cubs|brewers|cardinals|pirates|reds|padres|dodgers|giants|rockies|diamondbacks|astros|rangers|angels|athletics|mariners|rays|blue jays|orioles|royals|twins|white sox|tigers|guardians)\b.{0,80}\b(beat|beats|defeat|defeats|top|tops|halt|halts|stop|stops|snap|snaps|edge|edges|blank|blanks|rout|routs|win|wins over|takes series|takes)\b.{0,40}\b(mets|new york)\b/i.test(a.headline || '');
       if (isOpponentStory) return false;
       return true;
     })
