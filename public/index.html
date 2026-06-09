@@ -310,6 +310,20 @@ function formatNews(articles, forNoah) {
   return out;
 }
 
+
+function getMood(moodType, articles, forEmily) {
+  const moods = {
+    bigWin:  forEmily ? "🔥 ON FIRE!! Best day ever!!" : "🔥 ELECTRIC. This team is dangerous.",
+    win:     forEmily ? "😊 Happy happy happy!!" : "💪 Solid. Keep stacking wins.",
+    loss:    forEmily ? "😤 We'll get them next time!!" : "😤 Frustrated but not worried. Bounce-back game tomorrow.",
+    bigLoss: forEmily ? "😢 Sad but still believers!!" : "😑 That one stings. Need a reset.",
+    live:    forEmily ? "😱 SO EXCITED RIGHT NOW!!" : "👀 Eyes on the ballpark. Anything can happen.",
+    upcoming:forEmily ? "🤩 SO PUMPED FOR TONIGHT!!" : "🧢 Game day energy. Let's see what this lineup does.",
+    offDay:  forEmily ? "😌 Resting up for the next one!!" : "📊 Off day. Good time to check the standings.",
+  };
+  return moods[moodType] || (forEmily ? "⚾ Go Mets!!" : "⚾ Let's go Mets.");
+}
+
 async function go() {
   const btn = document.getElementById('genBtn');
   const loading = document.getElementById('loading');
