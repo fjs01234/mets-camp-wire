@@ -128,8 +128,6 @@ const emilyOpeners = {
   bigLoss: ["Ugh, tough one -- but we still believe!!","The Mets will bounce back!!"],
   offDay:  ["No game today but I still have Mets news for you!!","Rest day for the Mets -- here's what's going on!!"],
 };
-const noahMoods  = { bigWin:"ABSOLUTELY SENDING IT -- 9/10", win:"Solid W -- 7/10", upcoming:"Locked In -- 7/10", live:"On Edge -- 7/10", loss:"Frustrating -- 4/10", bigLoss:"Brutal -- 2/10", offDay:"Steady -- 6/10" };
-const emilyMoods = { bigWin:"BEST DAY EVER!! -- 10/10!!", win:"Really Happy!! -- 8/10", upcoming:"SO EXCITED!! -- 8/10", live:"CAN'T STOP CHECKING THE SCORE!! -- 8/10", loss:"A little sad but hopeful -- 5/10", bigLoss:"Sending the Mets extra love -- 3/10", offDay:"Feeling good!! -- 7/10" };
 const noahJokes = [
   "Trivia: Who holds the Mets single-season strikeout record? (Tom Seaver -- 289 Ks in 1971)",
   "Trivia: What was the Mets record in their 1962 debut? (40-120 -- worst in modern history -- and we still love them!)",
@@ -375,7 +373,7 @@ ${pick(noahOpeners[moodType] || noahOpeners.offDay)}
 ${gameDescNoah}
 ${boxNoah}${newsNoah}
 ---
-METS MOOD: ${noahMoods[moodType]}
+METS MOOD: ${getMood(moodType, articles, false)}
 ---
 
 DAD'S CORNER:
@@ -395,7 +393,7 @@ ${pick(emilyOpeners[moodType] || emilyOpeners.offDay)}
 ${gameDescEmily}
 ${boxEmily}${newsEmily}
 ---
-METS MOOD OF THE DAY: ${emilyMoods[moodType]}
+METS MOOD OF THE DAY: ${getMood(moodType, articles, true)}
 ---
 
 FUN METS FACT:
