@@ -258,65 +258,57 @@ function filterNews(articles, hasCompletedGame) {
 }
 
 function formatBoxscore(detail, forNoah) {
-  if (!detail?.found || !detail.teamStats?.length) return '';
+  if (!detail?.found || !detail.teamStats?.length) return { batting: '', pitching: '', boxScore: '' };
   const nym = detail.teamStats.find(t => t.isNYM);
-  if (!nym) return '';
-  let out = '';
+  if (!nym) return { batting: '', pitching: '', boxScore: '' };
+
+  let batting = '', pitching = '', boxScore = '';
+
+  // BOX SCORE -- all teams line score
+  if (detail.teamStats.length >= 2) {
+    detail.teamStats.forEach(t => {
+      const r = t.runs ?? '?', h = t.hits ?? '?', e = t.errors ?? '0';
+      boxScore += `${(t.abbr||t.name||'???').padEnd(4)} R:${r}  H:${h}  E:${e}\n`;
+    });
+  }
 
   if (forNoah) {
-    if (detail.scoringPlays?.length) {
-      out += '\nSCORING PLAYS:\n';
-      detail.scoringPlays.forEach(p => {
-        out += `-- ${p.text}${p.score ? ' (' + p.score + ')' : ''}\n`;
-      });
-    }
+    // Full batting stats
     const goodHitters = nym.hitters.filter(h => !h.line.match(/^(\w+ \w+) 0-\d/));
     if (goodHitters.length) {
-      out += '\nMETS BATTING:\n';
-      goodHitters.slice(0,9).forEach(h => { out += `-- ${h.line}\n`; });
+      goodHitters.slice(0, 9).forEach(h => { batting += `* ${h.line}\n`; });
     }
+    // Full pitching stats
     if (nym.pitchers.length) {
-      out += '\nMETS PITCHING:\n';
-      nym.pitchers.forEach(p => { out += `-- ${p.line}\n`; });
+      nym.pitchers.forEach(p => { pitching += `* ${p.line}\n`; });
     }
   } else {
-    const stars = nym.hitters.filter(h => h.line.includes('HR') || h.line.includes('RBI') || (() => { const m = h.line.match(/(\d+)-(\d+)/); return m && parseInt(m[1]) >= 2; })());
-    if (stars.length) {
-      out += '\nMETS STARS:\n';
-      stars.slice(0,3).forEach(h => { out += `-- ${h.line}\n`; });
-    }
+    // Just stars for Emily
+    const stars = nym.hitters.filter(h =>
+      h.line.includes('HR') || h.line.includes('RBI') ||
+      (() => { const m = h.line.match(/(\d+)-(\d+)/); return m && parseInt(m[1]) >= 2; })()
+    );
+    stars.slice(0, 3).forEach(h => { batting += `* ${h.line}\n`; });
     const sp = nym.pitchers[0];
-    if (sp) out += `\nOn the mound: ${sp.line}\n`;
+    if (sp) pitching += `* ${sp.line}\n`;
   }
 
-  if (detail.keyMoments?.length) {
-    out += forNoah ? '\nKEY MOMENTS:\n' : '\nEXCITING MOMENTS:\n';
-    detail.keyMoments.slice(0, forNoah ? 5 : 3).forEach(m => { out += `-- ${m}\n`; });
-  }
-  return out;
+  return { batting, pitching, boxScore };
 }
 
 function formatNews(articles, forNoah) {
   if (!articles.length) return '';
   const toShow = articles.slice(0, forNoah ? 3 : 2);
-  let out = forNoah ? '\nMETS NEWS & NOTES:\n' : '\nMETS NEWS:\n';
+  let out = '';
   toShow.forEach((a, i) => {
-    out += `\n${i+1}. ${a.headline}\n`;
+    out += `${i+1}. ${a.headline}\n`;
     if (a.description && a.description !== a.headline) {
-      out += `   ${a.description}\n`;
+      const clean = a.description.replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim();
+      if (clean.length > 20) out += `   ${clean}\n`;
     }
-    if (a.story) {
-      const clean = a.story.replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim();
-      if (clean.length > 30 && clean !== a.description) {
-        const sentences = clean.match(/[^.!?]+[.!?]+/g) || [];
-        const limit = forNoah ? 4 : 2;
-        const excerpt = sentences.slice(0, limit).join(' ').trim();
-        const text = excerpt.length > 20 ? excerpt : clean.slice(0, forNoah ? 500 : 280);
-        out += `   ${text}\n`;
-      }
-    }
+    out += '\n';
   });
-  return out;
+  return out.trimEnd();
 }
 
 
@@ -381,51 +373,101 @@ async function go() {
         : `${g.gameLabel}: The Mets lost to the ${g.oppName}, ${g.oppScore}-${g.nymScore}.\n\n${g.diff>=5?'It was a tough night':'It was actually really close'}, but we love our Mets no matter what!! They will bounce back next game!!`;
     }
 
-    const boxNoah  = (g?.completed || g?.isLive) ? formatBoxscore(detail, true)  : '';
-    const boxEmily = (g?.completed || g?.isLive) ? formatBoxscore(detail, false) : '';
+    const boxNoah  = (g?.completed || g?.isLive) ? formatBoxscore(detail, true)  : { batting:'', pitching:'', boxScore:'' };
+    const boxEmily = (g?.completed || g?.isLive) ? formatBoxscore(detail, false) : { batting:'', pitching:'', boxScore:'' };
     const newsNoah  = formatNews(articles, true);
     const newsEmily = formatNews(articles, false);
 
-    const noahEmail =
-`SUBJECT: Mets ${moodType==='upcoming'?'Game Day':moodType==='live'?'Live Update':'Recap'} -- ${dateStr}
+    // Standings line
+    const standingsNoah = g?.nymRecord ? `Mets record: ${g.nymRecord}` : '';
+    const standingsEmily = g?.nymRecord ? `Mets record: ${g.nymRecord}` : '';
 
-Hey Noah,
+    // Next game line
+    const nextGameNoah  = g?.completed ? `Next game coming up -- stay tuned.` : '';
+    const nextGameEmily = g?.completed ? `Next game is coming up soon!!` : '';
 
-${pick(noahOpeners[moodType] || noahOpeners.offDay)}
+    // Injuries -- pulled from detail if available
+    const injuryLines = (detail?.injuries || []).slice(0, 4).map(i => `* ${i}`).join('\n') || '* No new injury updates today.';
 
-${gameDescNoah}
-${boxNoah}${newsNoah}
----
-METS MOOD: ${getMood(moodType, articles, false)}
----
+    function buildNoahEmail() {
+      const subjectLine = `Mets ${moodType==='upcoming'?'Game Day':moodType==='live'?'Live Update':'Recap'} -- ${dateStr}`;
 
-DAD'S CORNER:
-${pick(noahJokes)}
+      let body = `SUBJECT: ${subjectLine}\n\nHey Noah,\n\n${pick(noahOpeners[moodType] || noahOpeners.offDay)}\n\n`;
 
-Keep repping the blue and orange. Miss you man.
+      if (g?.completed) {
+        const sweep = detail?.seriesResult || '';
+        body += `${g.gameLabel}: NYM ${g.nymScore}, ${g.oppAbbr} ${g.oppScore} -- ${g.won?'W':'L'}${g.nymRecord ? '  |  Mets: ' + g.nymRecord : ''}\n`;
+        if (sweep) body += `${sweep}\n`;
+        body += '\n';
 
-Love, Dad`;
+        if (boxNoah.batting) {
+          body += `GAME HIGHLIGHTS:\n${boxNoah.batting}\n`;
+        }
+        if (boxNoah.pitching) {
+          body += `PITCHING RECAP:\n${boxNoah.pitching}\n`;
+        }
+        if (boxNoah.boxScore) {
+          body += `BOX SCORE:\n${boxNoah.boxScore}\n`;
+        }
+        if (standingsNoah) {
+          body += `STANDINGS:\n${standingsNoah}\n\n`;
+        }
+        if (nextGameNoah) {
+          body += `NEXT UP:\n${nextGameNoah}\n\n`;
+        }
+      } else {
+        body += `${gameDescNoah}\n\n`;
+      }
 
-    const emilyEmail =
-`SUBJECT: Your Mets ${moodType==='upcoming'?'Game Day!!':moodType==='live'?'Live Update!!':'Update'} from Dad!! ${moodType==='bigWin'||moodType==='win'?'Great News!!' : ''}
+      if (newsNoah) {
+        body += `METS NEWS:\n${newsNoah}\n\n`;
+      }
 
-Hi Emily!!
+      body += `INJURIES:\n${injuryLines}\n\n`;
+      body += `---\nMETS MOOD: ${getMood(moodType, articles, false)}\n---\n\n`;
+      body += `DAD'S CORNER:\n${pick(noahJokes)}\n\n`;
+      body += `Keep repping the blue and orange. Miss you man.\n\nLove, Dad`;
+      return body;
+    }
 
-${pick(emilyOpeners[moodType] || emilyOpeners.offDay)}
+    function buildEmilyEmail() {
+      const subjectLine = `Your Mets ${moodType==='upcoming'?'Game Day!!':moodType==='live'?'Live Update!!':'Update'} from Dad!! ${moodType==='bigWin'||moodType==='win'?'Great News!!' : ''}`.trim();
 
-${gameDescEmily}
-${boxEmily}${newsEmily}
----
-METS MOOD OF THE DAY: ${getMood(moodType, articles, true)}
----
+      let body = `SUBJECT: ${subjectLine}\n\nHi Emily!!\n\n${pick(emilyOpeners[moodType] || emilyOpeners.offDay)}\n\n`;
 
-FUN METS FACT:
-${pick(emilyJokes)}
+      if (g?.completed) {
+        body += g.won
+          ? `${g.gameLabel}: METS WIN!! Final: METS ${g.nymScore}, ${g.oppName} ${g.oppScore}!!\n\n`
+          : `${g.gameLabel}: Mets lost to the ${g.oppName}, ${g.oppScore}-${g.nymScore}.\n\n`;
 
-I miss you so so much!! Keep cheering for the Mets from camp!!
+        if (boxEmily.batting) {
+          body += `GAME HIGHLIGHTS:\n${boxEmily.batting}\n`;
+        }
+        if (boxEmily.pitching) {
+          body += `PITCHING RECAP:\n${boxEmily.pitching}\n`;
+        }
+        if (standingsEmily) {
+          body += `STANDINGS:\n${standingsEmily}\n\n`;
+        }
+        if (nextGameEmily) {
+          body += `NEXT UP:\n${nextGameEmily}\n\n`;
+        }
+      } else {
+        body += `${gameDescEmily}\n\n`;
+      }
 
-Love you to Citi Field and back,
-Dad xoxo`;
+      if (newsEmily) {
+        body += `METS NEWS:\n${newsEmily}\n\n`;
+      }
+
+      body += `---\nMETS MOOD OF THE DAY: ${getMood(moodType, articles, true)}\n---\n\n`;
+      body += `FUN METS FACT:\n${pick(emilyJokes)}\n\n`;
+      body += `I miss you so so much!! Keep cheering for the Mets from camp!!\n\nLove you to Citi Field and back,\nDad xoxo`;
+      return body;
+    }
+
+    const noahEmail  = buildNoahEmail();
+    const emilyEmail = buildEmilyEmail();
 
     document.getElementById('noahBox').textContent = noahEmail.trim();
     document.getElementById('emilyBox').textContent = emilyEmail.trim();
