@@ -238,6 +238,15 @@ function filterNews(articles, hasCompletedGame) {
     .filter(a => {
       if (hasCompletedGame && a.isPreview) return false;
       if (a.age > FORTY_EIGHT_HOURS) return false; // skip anything older than 48hrs
+      // Must be Mets-centric -- headline should mention Mets, NYM, or a known Mets player
+      // Exclude stories where the Mets are just the losing opponent
+      const h = (a.headline || '').toLowerCase();
+      const isMetsCentric = /\bmets\b|nym/.test(h);
+      if (!isMetsCentric) return false;
+      // Exclude headlines where a non-Mets team is the clear subject beating the Mets
+      // e.g. "Padres halt losing streak with win over Mets"
+      const isOpponentStory = /^[^|]*\b(yankees|red sox|braves|phillies|marlins|nationals|cubs|brewers|cardinals|pirates|reds|padres|dodgers|giants|rockies|diamondbacks|astros|rangers|angels|athletics|mariners|rays|blue jays|orioles|royals|twins|white sox|tigers|guardians|brewers)\b[^|]*\b(beats|beat|defeats|defeat|tops|halts|stops|snaps|rallies|edges|outduels|blanks|routs|wins|takes)\b/i.test(a.headline || '');
+      if (isOpponentStory) return false;
       return true;
     })
     // Sort: recaps first, then by recency
