@@ -221,22 +221,21 @@ function parseGame(game) {
   return { nym, opp, completed, isLive, isScheduled, nymScore, oppScore, won, diff, atHome, oppName, oppAbbr, nymRecord, oppRecord, gameTime, moodType, statusDesc, comp, inning: comp.status?.period, gameLabel };
 }
 
-function filterNews(articles, hasCompletedGame) {
+function filterNews(articles, hasCompletedGame, hasLiveGame) {
   const now = Date.now();
-  const TWELVE_HOURS = 12 * 60 * 60 * 1000;
   const FORTY_EIGHT_HOURS = 48 * 60 * 60 * 1000;
 
   return articles
     .map(a => {
       const pub = a._published || a.published || a.lastModified;
       const age = pub ? now - new Date(pub).getTime() : Infinity;
-      const isPreview = a._isPreview || /preview|matchup|vs\.|projections|odds|betting|how to watch|keys to/i.test(a.headline || '');
+      const isPreview = a._isPreview || /preview|matchup|vs\.|projections|odds|betting|how to watch|keys to|play the|face the|host the|opens series|begins series|after benge|after [a-z]+'s/i.test(a.headline || '');
       const isRecap = a._isRecap || /recap|final|highlights|game wrap|series win|wins|beats|defeats|shutout|walk.off|homer|home run|strikeout|rbi/i.test(a.headline || '');
       return { ...a, age, isPreview, isRecap };
     })
-    // Filter out previews if we have completed game data -- they're stale
+    // Suppress previews when game is live or already completed
     .filter(a => {
-      if (hasCompletedGame && a.isPreview) return false;
+      if ((hasCompletedGame || hasLiveGame) && a.isPreview) return false;
       if (a.age > FORTY_EIGHT_HOURS) return false; // skip anything older than 48hrs
       // Must be Mets-centric -- headline should mention Mets, NYM, or a known Mets player
       // Exclude stories where the Mets are just the losing opponent
@@ -348,8 +347,9 @@ async function go() {
 
     const g = parseGame(gameRaw);
     const hasCompletedGame = !!(g?.completed || detail?.found);
+    const hasLiveGame = !!g?.isLive;
     const rawArticles = newsData?.articles || [];
-    const articles = filterNews(rawArticles, hasCompletedGame);
+    const articles = filterNews(rawArticles, hasCompletedGame, hasLiveGame);
     const moodType = g?.moodType || 'offDay';
 
     let gameDescNoah = '', gameDescEmily = '';
