@@ -378,87 +378,90 @@ async function go() {
     const newsNoah  = formatNews(articles, true);
     const newsEmily = formatNews(articles, false);
 
-    // Standings line
-    const standingsNoah = g?.nymRecord ? `Mets record: ${g.nymRecord}` : '';
-    const standingsEmily = g?.nymRecord ? `Mets record: ${g.nymRecord}` : '';
-
-    // Next game line
-    const nextGameNoah  = g?.completed ? `Next game coming up -- stay tuned.` : '';
-    const nextGameEmily = g?.completed ? `Next game is coming up soon!!` : '';
-
-    // Injuries -- pulled from detail if available
     const injuryLines = (detail?.injuries || []).slice(0, 4).map(i => `* ${i}`).join('\n') || '* No new injury updates today.';
 
     function buildNoahEmail() {
-      const subjectLine = `Mets ${moodType==='upcoming'?'Game Day':moodType==='live'?'Live Update':'Recap'} -- ${dateStr}`;
+      const subjectLabel = moodType==='upcoming' ? 'Game Day' : moodType==='live' ? 'Live Update' : 'Recap';
+      let body = `SUBJECT: Mets ${subjectLabel} -- ${dateStr}\n\nHey Noah,\n\n${pick(noahOpeners[moodType] || noahOpeners.offDay)}\n\n`;
 
-      let body = `SUBJECT: ${subjectLine}\n\nHey Noah,\n\n${pick(noahOpeners[moodType] || noahOpeners.offDay)}\n\n`;
-
+      // RESULT LINE
       if (g?.completed) {
+        body += `RESULT: NYM ${g.nymScore}, ${g.oppAbbr} ${g.oppScore} -- ${g.won?'W':'L'}`;
+        if (g.nymRecord) body += `  |  Mets: ${g.nymRecord}`;
+        body += '\n';
         const sweep = detail?.seriesResult || '';
-        body += `${g.gameLabel}: NYM ${g.nymScore}, ${g.oppAbbr} ${g.oppScore} -- ${g.won?'W':'L'}${g.nymRecord ? '  |  Mets: ' + g.nymRecord : ''}\n`;
         if (sweep) body += `${sweep}\n`;
         body += '\n';
-
-        if (boxNoah.batting) {
-          body += `GAME HIGHLIGHTS:\n${boxNoah.batting}\n`;
-        }
-        if (boxNoah.pitching) {
-          body += `PITCHING RECAP:\n${boxNoah.pitching}\n`;
-        }
-        if (boxNoah.boxScore) {
-          body += `BOX SCORE:\n${boxNoah.boxScore}\n`;
-        }
-        if (standingsNoah) {
-          body += `STANDINGS:\n${standingsNoah}\n\n`;
-        }
-        if (nextGameNoah) {
-          body += `NEXT UP:\n${nextGameNoah}\n\n`;
-        }
+      } else if (g?.isLive) {
+        body += `LIVE: NYM ${g.nymScore}, ${g.oppAbbr} ${g.oppScore} -- ${g.statusDesc}${g.inning ? ' | Inning ' + g.inning : ''}\nGame in progress vs. the ${g.oppName}. Check the MLB app!\n\n`;
+      } else if (g?.isScheduled) {
+        body += `${g.gameLabel}: NYM vs. ${g.oppAbbr}${g.gameTime ? ' -- ' + g.gameTime : ''}\n${g.atHome ? 'Home game at Citi Field' : 'Road game'} vs. the ${g.oppName}.\nMets are ${g.nymRecord || 'battling'} in the NL East. This one matters.\n\n`;
       } else {
-        body += `${gameDescNoah}\n\n`;
+        body += `No game today. Good time to check the standings and see where we sit in the NL East.\n\n`;
       }
 
+      // GAME HIGHLIGHTS (batting)
+      if (boxNoah.batting) {
+        body += `GAME HIGHLIGHTS:\n${boxNoah.batting}\n`;
+      }
+
+      // PITCHING RECAP
+      if (boxNoah.pitching) {
+        body += `PITCHING RECAP:\n${boxNoah.pitching}\n`;
+      }
+
+      // BOX SCORE
+      if (boxNoah.boxScore) {
+        body += `BOX SCORE:\n${boxNoah.boxScore}\n`;
+      }
+
+      // STANDINGS
+      if (g?.nymRecord) {
+        body += `STANDINGS:\nMets record: ${g.nymRecord}\n\n`;
+      }
+
+      // NEXT UP
+      if (g?.completed) {
+        body += `NEXT UP:\nNext game coming up -- stay tuned.\n\n`;
+      }
+
+      // METS NEWS
       if (newsNoah) {
         body += `METS NEWS:\n${newsNoah}\n\n`;
       }
 
+      // INJURIES
       body += `INJURIES:\n${injuryLines}\n\n`;
+
       body += `---\nMETS MOOD: ${getMood(moodType, articles, false)}\n---\n\n`;
-      body += `DAD'S CORNER:\n${pick(noahJokes)}\n\n`;
-      body += `Keep repping the blue and orange. Miss you man.\n\nLove, Dad`;
+      body += `DAD'S CORNER:\n${pick(noahJokes)}\n\nKeep repping the blue and orange. Miss you man.\n\nLove, Dad`;
       return body;
     }
 
     function buildEmilyEmail() {
-      const subjectLine = `Your Mets ${moodType==='upcoming'?'Game Day!!':moodType==='live'?'Live Update!!':'Update'} from Dad!! ${moodType==='bigWin'||moodType==='win'?'Great News!!' : ''}`.trim();
-
-      let body = `SUBJECT: ${subjectLine}\n\nHi Emily!!\n\n${pick(emilyOpeners[moodType] || emilyOpeners.offDay)}\n\n`;
+      const subjectLabel = moodType==='upcoming' ? 'Game Day!!' : moodType==='live' ? 'Live Update!!' : 'Update';
+      const extraSubj = (moodType==='bigWin'||moodType==='win') ? ' Great News!!' : '';
+      let body = `SUBJECT: Your Mets ${subjectLabel} from Dad!!${extraSubj}\n\nHi Emily!!\n\n${pick(emilyOpeners[moodType] || emilyOpeners.offDay)}\n\n`;
 
       if (g?.completed) {
         body += g.won
-          ? `${g.gameLabel}: METS WIN!! Final: METS ${g.nymScore}, ${g.oppName} ${g.oppScore}!!\n\n`
-          : `${g.gameLabel}: Mets lost to the ${g.oppName}, ${g.oppScore}-${g.nymScore}.\n\n`;
+          ? `RESULT: METS WIN!! Final: METS ${g.nymScore}, ${g.oppName} ${g.oppScore}!!\n\n`
+          : `RESULT: Mets lost to the ${g.oppName}, ${g.oppScore}-${g.nymScore}.\n\n`;
 
-        if (boxEmily.batting) {
-          body += `GAME HIGHLIGHTS:\n${boxEmily.batting}\n`;
-        }
-        if (boxEmily.pitching) {
-          body += `PITCHING RECAP:\n${boxEmily.pitching}\n`;
-        }
-        if (standingsEmily) {
-          body += `STANDINGS:\n${standingsEmily}\n\n`;
-        }
-        if (nextGameEmily) {
-          body += `NEXT UP:\n${nextGameEmily}\n\n`;
-        }
+        if (boxEmily.batting) body += `GAME HIGHLIGHTS:\n${boxEmily.batting}\n`;
+        if (boxEmily.pitching) body += `PITCHING RECAP:\n${boxEmily.pitching}\n`;
+        if (g.nymRecord) body += `STANDINGS:\nMets record: ${g.nymRecord}\n\n`;
+        body += `NEXT UP:\nNext game is coming up soon!!\n\n`;
+
+      } else if (g?.isLive) {
+        body += `THE METS ARE PLAYING RIGHT NOW!!\nScore: METS ${g.nymScore}, ${g.oppName} ${g.oppScore} -- ${g.statusDesc}!! Ask your counselor to check!!\n\n`;
+      } else if (g?.isScheduled) {
+        body += `GAME DAY!! The Mets play the ${g.oppName}${g.gameTime ? ' at ' + g.gameTime : ' tonight'}!!\nThe game is ${g.atHome ? 'at Citi Field in New York' : 'on the road'}. Send all your good Mets energy from camp!! GO METS!!\n\n`;
       } else {
-        body += `${gameDescEmily}\n\n`;
+        body += `No Mets game today!! The players are resting up for the next one!!\n\n`;
       }
 
-      if (newsEmily) {
-        body += `METS NEWS:\n${newsEmily}\n\n`;
-      }
+      if (newsEmily) body += `METS NEWS:\n${newsEmily}\n\n`;
 
       body += `---\nMETS MOOD OF THE DAY: ${getMood(moodType, articles, true)}\n---\n\n`;
       body += `FUN METS FACT:\n${pick(emilyJokes)}\n\n`;
