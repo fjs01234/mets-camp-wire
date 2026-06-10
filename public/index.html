@@ -256,6 +256,76 @@ function filterNews(articles, hasCompletedGame, hasLiveGame) {
     });
 }
 
+
+function parseDetail(raw, gameId) {
+  if (!raw) return { found: false, teamStats: [], injuries: [] };
+
+  // ESPN summary endpoint returns { boxscore, plays, leaders, ... }
+  const box = raw.boxscore || raw;
+  const teams = box.teams || [];
+
+  if (!teams.length) return { found: false, teamStats: [], injuries: [] };
+
+  const teamStats = teams.map(t => {
+    const team = t.team || {};
+    const abbr = team.abbreviation || team.abbrev || '???';
+    const isNYM = abbr === 'NYM';
+    const stats = t.statistics || [];
+
+    // Find runs, hits, errors from team stats array
+    const getStat = (names) => {
+      for (const name of names) {
+        const s = stats.find(x => (x.name||x.abbreviation||'').toLowerCase() === name.toLowerCase());
+        if (s) return s.displayValue || s.value || '?';
+      }
+      return '?';
+    };
+    const runs   = getStat(['r','runs','R']);
+    const hits   = getStat(['h','hits','H']);
+    const errors = getStat(['e','errors','E']);
+
+    // Parse athletes (hitters and pitchers)
+    const athletes = t.athletes || [];
+    const hitters = [], pitchers = [];
+
+    athletes.forEach(a => {
+      const pos = (a.position?.abbreviation || a.pos || '').toUpperCase();
+      const name = a.athlete?.shortName || a.athlete?.displayName || a.name || '';
+      const stats = a.stats || [];
+      if (!stats.length || !name) return;
+
+      if (pos === 'P' || pos === 'SP' || pos === 'RP') {
+        // Pitcher: IP H R ER BB K
+        const line = `${name}: ${stats.map(s => s.displayValue || s.value || '0').slice(0,6).join(' ')}`;
+        pitchers.push({ line, name });
+      } else {
+        // Batter: AB-H HR RBI
+        const ab  = stats[0]?.displayValue || '0';
+        const h   = stats[1]?.displayValue || '0';
+        const hr  = stats[5]?.displayValue || '0';
+        const rbi = stats[4]?.displayValue || '0';
+        const bb  = stats[2]?.displayValue || '';
+        let line = `${name}: ${h}-${ab}`;
+        if (parseInt(hr) > 0)  line += `, ${hr} HR`;
+        if (parseInt(rbi) > 0) line += `, ${rbi} RBI`;
+        hitters.push({ line, name, h: parseInt(h), ab: parseInt(ab), hr: parseInt(hr), rbi: parseInt(rbi) });
+      }
+    });
+
+    return { abbr, name: team.displayName || abbr, isNYM, runs, hits, errors, hitters, pitchers };
+  });
+
+  // Injuries from ESPN news/injuries if present
+  const injuries = (raw.injuries || []).map(i => {
+    const name = i.athlete?.shortName || i.athlete?.displayName || '';
+    const status = i.status || '';
+    const detail = i.details?.detail || '';
+    return `${name} (${status}${detail ? ' -- ' + detail : ''})`;
+  }).filter(Boolean);
+
+  return { found: true, teamStats, injuries, seriesResult: raw.header?.series?.summary || '' };
+}
+
 function formatBoxscore(detail, forNoah) {
   if (!detail?.found || !detail.teamStats?.length) return { batting: '', pitching: '', boxScore: '' };
   const nym = detail.teamStats.find(t => t.isNYM);
@@ -339,13 +409,19 @@ async function go() {
   try {
     const dateStr = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
 
-    const [gameRaw, newsData, detail] = await Promise.all([
+    const [gameRaw, newsData] = await Promise.all([
       findMetsGame(),
-      fetchJSON(`${PROXY}/news/baseball/mlb/${NYM_ID}`),
-      fetchJSON(`${PROXY}/gamedetail/baseball/mlb/${NYM_ID}`)
+      fetchJSON(`${PROXY}/news/baseball/mlb/${NYM_ID}`)
     ]);
 
     const g = parseGame(gameRaw);
+
+    // Fetch game detail using the actual ESPN event ID for accurate box score
+    let detailRaw = null;
+    if (g?.comp?.id) {
+      detailRaw = await fetchJSON(`${PROXY}/espn?path=sports/baseball/mlb/summary&event=${g.comp.id}`);
+    }
+    const detail = parseDetail(detailRaw, g?.comp?.id);
     const hasCompletedGame = !!(g?.completed || detail?.found);
     const hasLiveGame = !!g?.isLive;
     const rawArticles = newsData?.articles || [];
