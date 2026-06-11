@@ -244,7 +244,7 @@ function filterNews(articles, hasCompletedGame, hasLiveGame) {
       if (!isMetsCentric) return false;
       // Exclude headlines where the story is really about the opponent beating the Mets
       // Catches both "Padres halt..." and "Freddy Fermin homer helps Padres beat Mets"
-      const isOpponentStory = /\b(yankees|red sox|braves|phillies|marlins|nationals|cubs|brewers|cardinals|pirates|reds|padres|dodgers|giants|rockies|diamondbacks|astros|rangers|angels|athletics|mariners|rays|blue jays|orioles|royals|twins|white sox|tigers|guardians)\b.{0,80}\b(beat|beats|defeat|defeats|top|tops|halt|halts|stop|stops|snap|snaps|edge|edges|blank|blanks|rout|routs|win|wins over|takes series|takes)\b.{0,40}\b(mets|new york)\b/i.test(a.headline || '');
+      const isOpponentStory = /\b(yankees|red sox|braves|phillies|marlins|nationals|cubs|brewers|cardinals|pirates|reds|padres|dodgers|giants|rockies|diamondbacks|astros|rangers|angels|athletics|mariners|rays|blue jays|orioles|royals|twins|white sox|tigers|guardians)\b.{0,100}\b(beat|beats|defeat|defeats|top|tops|halt|halts|stop|stops|snap|snaps|edge|edges|blank|blanks|rout|routs|win|wins over|takes series|takes|power|powers|past|downs|hands|hands loss|over the mets|nip|nips)\b.{0,60}\b(mets|new york)\b/i.test(a.headline || '') || /\b(yankees|red sox|braves|phillies|marlins|nationals|cubs|brewers|cardinals|pirates|reds|padres|dodgers|giants|rockies|diamondbacks|astros|rangers|angels|athletics|mariners|rays|blue jays|orioles|royals|twins|white sox|tigers|guardians)\b.{0,30}\b(past|over)\b.{0,20}\b(mets|new york)\b/i.test(a.headline || '');
       if (isOpponentStory) return false;
       return true;
     })
@@ -260,68 +260,81 @@ function filterNews(articles, hasCompletedGame, hasLiveGame) {
 function parseDetail(raw, gameId) {
   if (!raw) return { found: false, teamStats: [], injuries: [] };
 
-  // ESPN summary endpoint returns { boxscore, plays, leaders, ... }
-  const box = raw.boxscore || raw;
-  const teams = box.teams || [];
+  // ESPN summary: { boxscore: { teams: [{team,statistics}], players: [{team,statistics:[{athletes}]}] }, header, injuries }
+  const boxscore = raw.boxscore;
+  if (!boxscore) return { found: false, teamStats: [], injuries: [] };
 
-  if (!teams.length) return { found: false, teamStats: [], injuries: [] };
+  const teamsRaw  = boxscore.teams  || [];
+  const playersRaw = boxscore.players || [];
 
-  const teamStats = teams.map(t => {
+  if (!teamsRaw.length) return { found: false, teamStats: [], injuries: [] };
+
+  const teamStats = teamsRaw.map(t => {
     const team = t.team || {};
-    const abbr = team.abbreviation || team.abbrev || '???';
+    const abbr = team.abbreviation || '???';
     const isNYM = abbr === 'NYM';
     const stats = t.statistics || [];
 
-    // Find runs, hits, errors from team stats array
-    const getStat = (names) => {
+    const getStat = (...names) => {
       for (const name of names) {
-        const s = stats.find(x => (x.name||x.abbreviation||'').toLowerCase() === name.toLowerCase());
-        if (s) return s.displayValue || s.value || '?';
+        const s = stats.find(x => x.name === name || x.abbreviation === name);
+        if (s) return s.displayValue ?? s.value ?? '?';
       }
       return '?';
     };
-    const runs   = getStat(['r','runs','R']);
-    const hits   = getStat(['h','hits','H']);
-    const errors = getStat(['e','errors','E']);
+    const runs   = getStat('runs','R','r');
+    const hits   = getStat('hits','H','h');
+    const errors = getStat('errors','E','e');
 
-    // Parse athletes (hitters and pitchers)
-    const athletes = t.athletes || [];
+    // Players come from boxscore.players[], matched by team abbreviation
+    const playerTeam = playersRaw.find(p => p.team?.abbreviation === abbr);
     const hitters = [], pitchers = [];
 
-    athletes.forEach(a => {
-      const pos = (a.position?.abbreviation || a.pos || '').toUpperCase();
-      const name = a.athlete?.shortName || a.athlete?.displayName || a.name || '';
-      const stats = a.stats || [];
-      if (!stats.length || !name) return;
+    if (playerTeam) {
+      // statistics is array of stat groups, e.g. [{name:'batting',athletes:[]},{name:'pitching',athletes:[]}]
+      (playerTeam.statistics || []).forEach(group => {
+        const groupName = (group.name || '').toLowerCase();
+        const keys = group.keys || [];
+        (group.athletes || []).forEach(a => {
+          const name = a.athlete?.shortName || a.athlete?.displayName || '';
+          const vals = a.stats || [];
+          if (!name || !vals.length) return;
 
-      if (pos === 'P' || pos === 'SP' || pos === 'RP') {
-        // Pitcher: IP H R ER BB K
-        const line = `${name}: ${stats.map(s => s.displayValue || s.value || '0').slice(0,6).join(' ')}`;
-        pitchers.push({ line, name });
-      } else {
-        // Batter: AB-H HR RBI
-        const ab  = stats[0]?.displayValue || '0';
-        const h   = stats[1]?.displayValue || '0';
-        const hr  = stats[5]?.displayValue || '0';
-        const rbi = stats[4]?.displayValue || '0';
-        const bb  = stats[2]?.displayValue || '';
-        let line = `${name}: ${h}-${ab}`;
-        if (parseInt(hr) > 0)  line += `, ${hr} HR`;
-        if (parseInt(rbi) > 0) line += `, ${rbi} RBI`;
-        hitters.push({ line, name, h: parseInt(h), ab: parseInt(ab), hr: parseInt(hr), rbi: parseInt(rbi) });
-      }
-    });
+          if (groupName === 'pitching') {
+            // keys: IP H R ER BB K HR ERA
+            const ip  = vals[keys.indexOf('IP')]  || vals[0] || '0';
+            const k   = vals[keys.indexOf('K')]   || vals[5] || '0';
+            const er  = vals[keys.indexOf('ER')]  || vals[3] || '0';
+            const bb  = vals[keys.indexOf('BB')]  || vals[4] || '0';
+            pitchers.push({ line: `${name}: ${ip} IP, ${k} K, ${er} ER, ${bb} BB`, name });
+          } else {
+            // batting keys: AB H R RBI BB HR AVG
+            const ab  = parseInt(vals[keys.indexOf('AB')]  ?? vals[0] ?? 0);
+            const h   = parseInt(vals[keys.indexOf('H')]   ?? vals[1] ?? 0);
+            const r   = parseInt(vals[keys.indexOf('R')]   ?? vals[2] ?? 0);
+            const rbi = parseInt(vals[keys.indexOf('RBI')] ?? vals[3] ?? 0);
+            const hr  = parseInt(vals[keys.indexOf('HR')]  ?? vals[5] ?? 0);
+            let line = `${name}: ${h}-${ab}`;
+            if (hr  > 0) line += `, ${hr} HR`;
+            if (rbi > 0) line += `, ${rbi} RBI`;
+            if (r   > 0) line += `, ${r} R`;
+            hitters.push({ line, name, h, ab, hr, rbi });
+          }
+        });
+      });
+    }
 
     return { abbr, name: team.displayName || abbr, isNYM, runs, hits, errors, hitters, pitchers };
   });
 
-  // Injuries from ESPN news/injuries if present
-  const injuries = (raw.injuries || []).map(i => {
-    const name = i.athlete?.shortName || i.athlete?.displayName || '';
-    const status = i.status || '';
-    const detail = i.details?.detail || '';
-    return `${name} (${status}${detail ? ' -- ' + detail : ''})`;
-  }).filter(Boolean);
+  const injuries = (raw.injuries || []).flatMap(teamInj =>
+    (teamInj.injuries || [teamInj]).map(i => {
+      const name = i.athlete?.shortName || i.athlete?.displayName || '';
+      const status = i.status || i.type || '';
+      const desc = i.details?.detail || i.longComment || '';
+      return name ? `${name}${status ? ' (' + status + ')' : ''}${desc ? ' -- ' + desc : ''}` : null;
+    }).filter(Boolean)
+  );
 
   return { found: true, teamStats, injuries, seriesResult: raw.header?.series?.summary || '' };
 }
@@ -422,6 +435,29 @@ async function go() {
       detailRaw = await fetchJSON(`${PROXY}/espn?path=sports/baseball/mlb/summary&event=${g.comp.id}`);
     }
     const detail = parseDetail(detailRaw, g?.comp?.id);
+
+    // Fetch next scheduled Mets game for NEXT UP section
+    let nextGame = null;
+    try {
+      const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate()+1);
+      const tomorrowStr = tomorrow.toISOString().slice(0,10).replace(/-/g,'');
+      const nextRaw = await fetchJSON(`${PROXY}/espn?path=sports/baseball/mlb/scoreboard&dates=${tomorrowStr}`);
+      const nextMets = (nextRaw?.events || []).find(e => e.competitions?.[0]?.competitors?.some(c => c.team?.abbreviation === 'NYM'));
+      if (nextMets) {
+        const nc = nextMets.competitions[0];
+        const nnym = nc.competitors.find(c => c.team?.abbreviation === 'NYM');
+        const nopp = nc.competitors.find(c => c.team?.abbreviation !== 'NYM');
+        let ngTime = '';
+        try { const d = new Date(nc.date); ngTime = d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York'})+' ET'; } catch {}
+        nextGame = {
+          oppAbbr: nopp?.team?.abbreviation || 'OPP',
+          oppName: nopp?.team?.displayName || 'opponent',
+          atHome: nnym?.homeAway === 'home',
+          gameTime: ngTime,
+          label: 'TOMORROW'
+        };
+      }
+    } catch(e) {}
     const hasCompletedGame = !!(g?.completed || detail?.found);
     const hasLiveGame = !!g?.isLive;
     const rawArticles = newsData?.articles || [];
@@ -497,7 +533,9 @@ async function go() {
       }
 
       // NEXT UP
-      if (g?.completed) {
+      if (nextGame) {
+        body += `NEXT UP:\n${nextGame.label}: NYM vs. ${nextGame.oppAbbr}${nextGame.gameTime ? ' -- ' + nextGame.gameTime : ''}. ${nextGame.atHome ? 'Home game at Citi Field.' : 'Road game.'}\n\n`;
+      } else if (g?.completed) {
         body += `NEXT UP:\nNext game coming up -- stay tuned.\n\n`;
       }
 
@@ -527,7 +565,7 @@ async function go() {
         if (boxEmily.batting) body += `GAME HIGHLIGHTS:\n${boxEmily.batting}\n`;
         if (boxEmily.pitching) body += `PITCHING RECAP:\n${boxEmily.pitching}\n`;
         if (g.nymRecord) body += `STANDINGS:\nMets record: ${g.nymRecord}\n\n`;
-        body += `NEXT UP:\nNext game is coming up soon!!\n\n`;
+        body += nextGame ? `NEXT UP:\n${nextGame.label}: Mets vs. ${nextGame.oppName}${nextGame.gameTime ? ' at ' + nextGame.gameTime : ' tomorrow'}!!\n\n` : `NEXT UP:\nNext Mets game is coming up soon!!\n\n`;
 
       } else if (g?.isLive) {
         body += `THE METS ARE PLAYING RIGHT NOW!!\nScore: METS ${g.nymScore}, ${g.oppName} ${g.oppScore} -- ${g.statusDesc}!! Ask your counselor to check!!\n\n`;
