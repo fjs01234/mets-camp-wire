@@ -436,6 +436,28 @@ async function go() {
     }
     const detail = parseDetail(detailRaw, g?.comp?.id);
 
+    // DEBUG -- remove after fixing
+    const debugEl = document.getElementById('debugBox');
+    if (debugEl) {
+      const box = detailRaw?.boxscore;
+      debugEl.textContent = JSON.stringify({
+        hasRaw: !!detailRaw,
+        rawKeys: detailRaw ? Object.keys(detailRaw) : [],
+        boxKeys: box ? Object.keys(box) : [],
+        teamsCount: box?.teams?.length,
+        playersCount: box?.players?.length,
+        firstTeam: box?.teams?.[0]?.team?.abbreviation,
+        firstPlayerTeam: box?.players?.[0]?.team?.abbreviation,
+        firstPlayerStatGroups: box?.players?.[0]?.statistics?.map(s => s.name),
+        firstBatterKeys: box?.players?.[0]?.statistics?.[0]?.keys,
+        sampleBatter: box?.players?.[0]?.statistics?.[0]?.athletes?.[0]?.athlete?.shortName + ': ' + JSON.stringify(box?.players?.[0]?.statistics?.[0]?.athletes?.[0]?.stats),
+        detailFound: detail.found,
+        teamStats: detail.teamStats?.map(t => t.abbr + ' H:' + t.hitters?.length + ' P:' + t.pitchers?.length),
+        gameId: g?.comp?.id
+      }, null, 2);
+      debugEl.style.display = 'block';
+    }
+
     // Fetch next scheduled Mets game for NEXT UP section
     let nextGame = null;
     try {
