@@ -428,9 +428,74 @@ async function go() {
 
     const g = parseGame(gameRaw);
 
-    // Fetch game detail from proxy /gamedetail -- returns { found, teamStats:[{tAbbr,isNYM,hitters,pitchers}], scoringPlays, keyMoments }
+    // Fetch game detail from proxy -- then parse boxscore directly in client
     const detailRaw = await fetchJSON(`${PROXY}/gamedetail/baseball/mlb/${NYM_ID}`);
-    const detail = detailRaw?.found ? detailRaw : { found: false, teamStats: [], injuries: [] };
+
+    // If proxy returned hitters (new version), use as-is
+    // If hitters empty (old proxy), re-fetch the ESPN summary directly and parse here
+    let detail = detailRaw?.found ? detailRaw : { found: false, teamStats: [], injuries: [] };
+
+    if (detail.found) {
+      const nymStats = detail.teamStats?.find(t => t.isNYM || t.tAbbr === 'NYM');
+      const hasPlayers = nymStats?.hitters?.length > 0 || nymStats?.pitchers?.length > 0;
+
+      if (!hasPlayers && detail.gameId) {
+        // Proxy is old version -- parse ESPN summary directly
+        const summaryRaw = await fetchJSON(`${PROXY}/espn?path=sports/baseball/mlb/summary&event=${detail.gameId}`);
+        if (summaryRaw?.boxscore?.players?.length) {
+          const players = summaryRaw.boxscore.players;
+          detail.teamStats = detail.teamStats.map(team => {
+            const pBlock = players.find(p => p.team?.abbreviation === team.tAbbr);
+            if (!pBlock) return team;
+            const hitters = [], pitchers = [];
+            for (const sg of (pBlock.statistics || [])) {
+              const type = (sg.name || '').toLowerCase();
+              const keys = sg.keys || [];
+              for (const ath of (sg.athletes || [])) {
+                const name = ath.athlete?.displayName || '';
+                const vals = ath.stats || [];
+                if (!name || !vals.length) continue;
+                const sm = {};
+                keys.forEach((k,i) => { if (vals[i] != null && vals[i] !== '--') sm[k] = vals[i]; });
+                if (type === 'batting') {
+                  const hab = sm['hits-atBats'] || '';
+                  const hr  = sm['homeRuns']; const rbi = sm['RBIs']; const bb = sm['walks'];
+                  if (hab) {
+                    let line = `${name}: ${hab}`;
+                    if (hr && hr !== '0') line += `, ${hr} HR`;
+                    if (rbi && rbi !== '0') line += `, ${rbi} RBI`;
+                    if (bb && bb !== '0') line += `, BB`;
+                    hitters.push({ name, line });
+                  }
+                } else if (type === 'pitching') {
+                  const ip = sm['fullInnings.partInnings'];
+                  const er = sm['earnedRuns']; const so = sm['strikeouts'];
+                  const bb = sm['walks']; const era = sm['ERA'];
+                  if (ip) {
+                    let line = `${name}: ${ip} IP`;
+                    if (er != null) line += `, ${er} ER`;
+                    if (so && so !== '0') line += `, ${so} K`;
+                    if (bb && bb !== '0') line += `, ${bb} BB`;
+                    if (era) line += ` (ERA: ${era})`;
+                    pitchers.push({ name, line });
+                  }
+                }
+              }
+            }
+            // Get H from summing hits column
+            const batGroup = pBlock.statistics?.find(s => s.name === 'batting');
+            if (batGroup) {
+              const hIdx = (batGroup.keys || []).indexOf('hits');
+              if (hIdx >= 0) {
+                const totalH = (batGroup.athletes || []).reduce((sum, a) => sum + (parseInt(a.stats?.[hIdx]) || 0), 0);
+                if (totalH > 0) team.H = String(totalH);
+              }
+            }
+            return { ...team, hitters, pitchers };
+          });
+        }
+      }
+    }
 
 
 
