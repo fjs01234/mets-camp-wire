@@ -605,6 +605,7 @@ async function go() {
     } catch(e) {}
     const hasCompletedGame = !!(g?.completed || detail?.found);
     const hasLiveGame = !!g?.isLive;
+    const rawArticles = mergedNewsData?.articles || [];
     const articles = filterNews(rawArticles, hasCompletedGame, hasLiveGame);
     const moodType = g?.moodType || 'offDay';
 
