@@ -431,7 +431,7 @@ async function go() {
     // Fetch game detail from proxy -- then parse boxscore directly in client
     const [detailRaw, injuryData] = await Promise.all([
       fetchJSON(`${PROXY}/gamedetail/baseball/mlb/${NYM_ID}`),
-      fetchJSON(`${PROXY}/injuries/baseball/mlb/${NYM_ID}`)
+      fetchJSON(`${PROXY}/mlbinjuries/mets`)
     ]);
 
     // If proxy returned hitters (new version), use as-is
@@ -560,12 +560,17 @@ async function go() {
 
     const injuryLines = (() => {
       const list = injuryData?.injuries || detail?.injuries || [];
-      if (!list.length) return '* No new injury updates today.';
-      return list.slice(0, 5).map(i => {
+      // Filter out season-ending (2027 return) to keep relevant
+      const active = list.filter(i => {
+        const ret = (i.expectedReturn || i.status || '').toLowerCase();
+        return !ret.includes('2027');
+      });
+      if (!active.length) return '* No injury updates at this time.';
+      return active.slice(0, 6).map(i => {
         if (typeof i === 'string') return `* ${i}`;
-        const status = i.status ? ` (${i.status})` : '';
-        const detail = i.detail ? ` -- ${i.detail}` : '';
-        return `* ${i.name}${status}${detail}`;
+        const ret = i.expectedReturn ? ` -- back: ${i.expectedReturn}` : '';
+        const inj = i.injury ? ` (${i.injury})` : '';
+        return `* ${i.pos ? i.pos + ' ' : ''}${i.name}${inj}${ret}`;
       }).join('\n');
     })();
 
