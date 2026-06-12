@@ -579,7 +579,7 @@ async function go() {
       const tomorrowStr = (() => { const d = new Date(today2); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10).replace(/-/g,''); })();
 
       for (const [dateStr, label] of [[todayStr, 'TONIGHT'], [tomorrowStr, 'TOMORROW']]) {
-        const nextRaw = await fetchJSON(`${PROXY}/espn?path=sports/baseball/mlb/scoreboard&dates=${dateStr}`);
+        const nextRaw = await fetchJSON(`${PROXY}/scoreboard/baseball/mlb?dates=${dateStr}`);
         const nextMets = (nextRaw?.events || []).find(e => {
           const comp = e.competitions?.[0];
           const hasNYM = comp?.competitors?.some(c => c.team?.abbreviation === 'NYM');
