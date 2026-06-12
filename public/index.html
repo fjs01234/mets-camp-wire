@@ -655,53 +655,42 @@ async function go() {
       const subjectLabel = moodType==='upcoming' ? 'Game Day' : moodType==='live' ? 'Live Update' : 'Recap';
       let body = `SUBJECT: Mets ${subjectLabel} -- ${dateStr}\n\nHey Noah,\n\n${pick(noahOpeners[moodType] || noahOpeners.offDay)}\n\n`;
 
-      // RESULT LINE
-      if (g?.completed) {
-        body += `RESULT: NYM ${g.nymScore}, ${g.oppAbbr} ${g.oppScore} -- ${g.won?'W':'L'}`;
-        if (g.nymRecord) body += `  |  Mets: ${g.nymRecord}`;
-        body += '\n';
-        const sweep = detail?.seriesResult || '';
-        if (sweep) body += `${sweep}\n`;
-        body += '\n';
+      // YESTERDAY'S RECAP (always first if available)
+      if (detail?.found) {
+        // Use detail scores for the recap (more reliable than g scores)
+        const dHome = detail.home?.abbr === 'NYM' ? detail.home : detail.away;
+        const dAway = detail.home?.abbr !== 'NYM' ? detail.home : detail.away;
+        const dNymScore = dHome?.abbr === 'NYM' ? detail.home?.score : detail.away?.score;
+        const dOppScore = dHome?.abbr === 'NYM' ? detail.away?.score : detail.home?.score;
+        const dOppAbbr  = dHome?.abbr === 'NYM' ? detail.away?.abbr : detail.home?.abbr;
+        const dWon = parseInt(dNymScore) > parseInt(dOppScore);
+        body += `LAST GAME: NYM ${dNymScore}, ${dOppAbbr} ${dOppScore} -- ${dWon ? 'W' : 'L'}`;
+        if (g?.nymRecord) body += `  |  Mets: ${g.nymRecord}`;
+        body += '\n\n';
+
+        if (boxNoah.batting) {
+          body += `GAME HIGHLIGHTS:\n${boxNoah.batting}\n`;
+        } else if (detail?.scoringPlays?.length) {
+          body += `GAME HIGHLIGHTS:\n`;
+          detail.scoringPlays.forEach(p => {
+            body += `* ${p.text}${p.score ? ' (' + p.score + ')' : ''}\n`;
+          });
+          body += '\n';
+        }
+        if (boxNoah.pitching) body += `PITCHING RECAP:\n${boxNoah.pitching}\n`;
+        if (boxNoah.boxScore) body += `BOX SCORE:\n${boxNoah.boxScore}\n`;
       } else if (g?.isLive) {
         body += `LIVE: NYM ${g.nymScore}, ${g.oppAbbr} ${g.oppScore} -- ${g.statusDesc}${g.inning ? ' | Inning ' + g.inning : ''}\nGame in progress vs. the ${g.oppName}. Check the MLB app!\n\n`;
-      } else if (g?.isScheduled) {
-        body += `${g.gameLabel}: NYM vs. ${g.oppAbbr}${g.gameTime ? ' -- ' + g.gameTime : ''}\n${g.atHome ? 'Home game at Citi Field' : 'Road game'} vs. the ${g.oppName}.\nMets are ${g.nymRecord || 'battling'} in the NL East. This one matters.\n\n`;
-      } else {
-        body += `No game today. Good time to check the standings and see where we sit in the NL East.\n\n`;
-      }
-
-      // GAME HIGHLIGHTS (batting stats, or scoring plays as fallback)
-      if (boxNoah.batting) {
-        body += `GAME HIGHLIGHTS:\n${boxNoah.batting}\n`;
-      } else if (detail?.scoringPlays?.length) {
-        body += `GAME HIGHLIGHTS:\n`;
-        detail.scoringPlays.forEach(p => {
-          body += `* ${p.text}${p.score ? ' (' + p.score + ')' : ''}\n`;
-        });
-        body += '\n';
-      }
-
-      // PITCHING RECAP
-      if (boxNoah.pitching) {
-        body += `PITCHING RECAP:\n${boxNoah.pitching}\n`;
-      }
-
-      // BOX SCORE
-      if (boxNoah.boxScore) {
-        body += `BOX SCORE:\n${boxNoah.boxScore}\n`;
+      } else if (!nextGame) {
+        body += `No game today. Good time to check the standings.\n\n`;
       }
 
       // STANDINGS
-      if (g?.nymRecord) {
-        body += `STANDINGS:\nMets record: ${g.nymRecord}\n\n`;
-      }
+      if (g?.nymRecord) body += `STANDINGS:\nMets record: ${g.nymRecord}\n\n`;
 
       // NEXT UP
       if (nextGame) {
         body += `NEXT UP:\n${nextGame.label}: NYM vs. ${nextGame.oppAbbr}${nextGame.gameTime ? ' -- ' + nextGame.gameTime : ''}. ${nextGame.atHome ? 'Home game at Citi Field.' : 'Road game.'}\n\n`;
-      } else if (g?.completed) {
-        body += `NEXT UP:\nNext game coming up -- stay tuned.\n\n`;
       }
 
       // METS NEWS
