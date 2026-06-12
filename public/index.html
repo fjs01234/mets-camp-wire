@@ -484,24 +484,11 @@ async function go() {
   try {
     const dateStr = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
 
-    const [gameRaw, newsData, googleNewsData] = await Promise.all([
+    const [gameRaw, newsData] = await Promise.all([
       findMetsGame(),
-      fetchJSON(`${PROXY}/news/baseball/mlb/${NYM_ID}`),
-      fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent('https://news.google.com/rss/search?q=New+York+Mets+baseball&hl=en-US&gl=US&ceid=US:en')}&count=10`)
-        .then(r => r.json())
-        .then(d => ({ articles: (d.items || []).map(a => ({
-          headline: (a.title || '').replace(/\s+-\s+[^-]+$/, '').trim(),
-          description: (a.description || '').replace(/<[^>]+>/g, '').slice(0, 200),
-          _published: a.pubDate || ''
-        })).filter(a => a.headline.length > 10) }))
-        .catch(() => ({ articles: [] }))
+      fetchJSON(`${PROXY}/news/baseball/mlb/${NYM_ID}`)
     ]);
-    const espnArticles   = newsData?.articles || [];
-    const googleArticles = googleNewsData?.articles || [];
-    const seenH = new Set(espnArticles.map(a => (a.headline||'').slice(0,40)));
-    const dedup = arr => arr.filter(a => { const k=(a.headline||'').slice(0,40); if(seenH.has(k)) return false; seenH.add(k); return true; });
-    const combined = [...espnArticles, ...dedup(googleArticles)];
-    const mergedNewsData = { articles: combined };
+    const mergedNewsData = newsData;
 
     const g = parseGame(gameRaw);
 
@@ -618,7 +605,7 @@ async function go() {
     } catch(e) {}
     const hasCompletedGame = !!(g?.completed || detail?.found);
     const hasLiveGame = !!g?.isLive;
-    const rawArticles = mergedNewsData?.articles || [];
+    const rawArticles = mergedNewsData?.articles || newsData?.articles || [];
     const articles = filterNews(rawArticles, hasCompletedGame, hasLiveGame);
     const moodType = g?.moodType || 'offDay';
 
