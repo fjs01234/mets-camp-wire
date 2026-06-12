@@ -408,7 +408,58 @@ function getMood(moodType, articles, forEmily) {
 
 
 async function fetchMetsInjuries() {
-  return await fetchJSON(`${PROXY}/mlbinjuries/mets`) || { found: false, injuries: [], transactions: [] };
+  try {
+    // Fetch raw MLB page via proxy passthrough
+    const r = await fetch(`${PROXY}/mlbraw/mets`);
+    if (!r.ok) return { found: false, injuries: [], transactions: [] };
+    const html = await r.text();
+
+    // Extract JSON content blocks (MLB stores content as __typename:Markdown)
+    const contentRe = /"__typename"\s*:\s*"Markdown"[^}]{0,50}"content"\s*:\s*"((?:[^"\\]|\\.)*)"/g;
+    const allBlocks = [];
+    let cm;
+    while ((cm = contentRe.exec(html)) !== null) {
+      let raw;
+      try { raw = JSON.parse('"' + cm[1] + '"'); }
+      catch { raw = cm[1].replace(/\\n/g, '\n').replace(/\\"/g, '"'); }
+      // Strip HTML tags (forge-entity etc) but keep inner text
+      allBlocks.push(raw.replace(/<[^>]+>/g, '').replace(/[ \t]{2,}/g, ' '));
+    }
+
+    const injuries = [], transactions = [];
+    let inInjuries = false, inTransactions = false;
+    const monthRe = /^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d+$/;
+    let txDate = '';
+
+    for (const block of allBlocks) {
+      const t = block.trim();
+      if (/LATEST INJURIES/i.test(t))     { inInjuries = true; inTransactions = false; continue; }
+      if (/LATEST TRANSACTIONS/i.test(t)) { inInjuries = false; inTransactions = true; continue; }
+      if (/More from MLB/i.test(t))        { inInjuries = false; inTransactions = false; continue; }
+
+      if (inInjuries) {
+        const nameM = t.match(/^(RHP|LHP|SP|RP|C|1B|2B|3B|SS|OF|IF|DH|INF)\s+([A-Za-z][A-Za-z .'-]+)/);
+        if (!nameM) continue;
+        const injM = t.match(/\*\*Injury:\*\*\s*([^\n*]{4,120})/i);
+        const retM = t.match(/\*\*Expected return:\*\*\s*([^\n*]{2,60})/i);
+        const injury = injM?.[1]?.replace(/\*+$/,'').trim() || '';
+        const ret    = retM?.[1]?.replace(/\*+$/,'').trim() || 'TBD';
+        if (nameM[2] && injury) injuries.push({ pos: nameM[1], name: nameM[2].trim(), injury, expectedReturn: ret });
+      }
+
+      if (inTransactions) {
+        if (monthRe.test(t)) { txDate = t; continue; }
+        if (txDate && (t.startsWith('•') || /Recalled|Optioned|Activated|Placed|Designated|Transferred|Selected|Released/i.test(t))) {
+          const clean = t.replace(/^[•·\s]+/,'').replace(/\[([^\]]+)\]\([^)]+\)/g,'$1').replace(/\*+/g,'').trim();
+          if (clean.length > 5) transactions.push({ date: txDate, move: clean });
+        }
+      }
+    }
+
+    return { found: true, injuries, transactions };
+  } catch(e) {
+    return { found: false, injuries: [], transactions: [] };
+  }
 }
 
 async function go() {
