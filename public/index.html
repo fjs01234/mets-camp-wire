@@ -584,23 +584,34 @@ async function go() {
     // Fetch next scheduled Mets game for NEXT UP section
     let nextGame = null;
     try {
-      const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate()+1);
-      const tomorrowStr = tomorrow.toISOString().slice(0,10).replace(/-/g,'');
-      const nextRaw = await fetchJSON(`${PROXY}/espn?path=sports/baseball/mlb/scoreboard&dates=${tomorrowStr}`);
-      const nextMets = (nextRaw?.events || []).find(e => e.competitions?.[0]?.competitors?.some(c => c.team?.abbreviation === 'NYM'));
-      if (nextMets) {
-        const nc = nextMets.competitions[0];
-        const nnym = nc.competitors.find(c => c.team?.abbreviation === 'NYM');
-        const nopp = nc.competitors.find(c => c.team?.abbreviation !== 'NYM');
-        let ngTime = '';
-        try { const d = new Date(nc.date); ngTime = d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York'})+' ET'; } catch {}
-        nextGame = {
-          oppAbbr: nopp?.team?.abbreviation || 'OPP',
-          oppName: nopp?.team?.displayName || 'opponent',
-          atHome: nnym?.homeAway === 'home',
-          gameTime: ngTime,
-          label: 'TOMORROW'
-        };
+      // Check today first (for evening games), then tomorrow
+      const today2 = new Date();
+      const todayStr    = today2.toISOString().slice(0,10).replace(/-/g,'');
+      const tomorrowStr = (() => { const d = new Date(today2); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10).replace(/-/g,''); })();
+
+      for (const [dateStr, label] of [[todayStr, 'TONIGHT'], [tomorrowStr, 'TOMORROW']]) {
+        const nextRaw = await fetchJSON(`${PROXY}/espn?path=sports/baseball/mlb/scoreboard&dates=${dateStr}`);
+        const nextMets = (nextRaw?.events || []).find(e => {
+          const comp = e.competitions?.[0];
+          const hasNYM = comp?.competitors?.some(c => c.team?.abbreviation === 'NYM');
+          const isUpcoming = !e.status?.type?.completed;
+          return hasNYM && isUpcoming;
+        });
+        if (nextMets) {
+          const nc = nextMets.competitions[0];
+          const nnym = nc.competitors.find(c => c.team?.abbreviation === 'NYM');
+          const nopp = nc.competitors.find(c => c.team?.abbreviation !== 'NYM');
+          let ngTime = '';
+          try { const d = new Date(nc.date); ngTime = d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York'})+' ET'; } catch {}
+          nextGame = {
+            oppAbbr: nopp?.team?.abbreviation || 'OPP',
+            oppName: nopp?.team?.displayName || 'opponent',
+            atHome: nnym?.homeAway === 'home',
+            gameTime: ngTime,
+            label
+          };
+          break;
+        }
       }
     } catch(e) {}
     const hasCompletedGame = !!(g?.completed || detail?.found);
