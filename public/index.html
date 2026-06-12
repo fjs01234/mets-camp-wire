@@ -223,13 +223,13 @@ function parseGame(game) {
 
 function filterNews(articles, hasCompletedGame, hasLiveGame) {
   const now = Date.now();
-  const FORTY_EIGHT_HOURS = 48 * 60 * 60 * 1000;
+  const FORTY_EIGHT_HOURS = 72 * 60 * 60 * 1000; // 72 hours
 
   return articles
     .map(a => {
       const pub = a._published || a.published || a.lastModified;
       const age = pub ? now - new Date(pub).getTime() : 0; // 0 = assume fresh if no timestamp
-      const isPreview = a._isPreview || /preview|matchup|vs\.|projections|odds|betting|how to watch|keys to|play the|face the|host the|opens series|begins series|after benge|after [a-z]+'s/i.test(a.headline || '');
+      const isPreview = a._isPreview || /odds|betting|how to watch|keys to the game|injury report|projected lineup|probable pitcher/i.test(a.headline || '');
       const isRecap = a._isRecap || /recap|final|highlights|game wrap|series win|wins|beats|defeats|shutout|walk.off|homer|home run|strikeout|rbi/i.test(a.headline || '');
       return { ...a, age, isPreview, isRecap };
     })
