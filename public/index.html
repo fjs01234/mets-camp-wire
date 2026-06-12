@@ -229,7 +229,7 @@ function filterNews(articles, hasCompletedGame, hasLiveGame) {
     .map(a => {
       const pub = a._published || a.published || a.lastModified;
       const age = pub ? now - new Date(pub).getTime() : 0; // 0 = assume fresh if no timestamp
-      const isPreview = a._isPreview || /odds|betting|how to watch|keys to the game|projected lineup|probable pitcher|host the|hosts the|opens series|begins series|first of.*series|game 1 of/i.test(a.headline || '');
+      const isPreview = a._isPreview || /odds|betting|how to watch|projected lineup|probable pitcher/i.test(a.headline || '');
       const isRecap = a._isRecap || /recap|final|highlights|game wrap|series win|wins|beats|defeats|shutout|walk.off|homer|home run|strikeout|rbi/i.test(a.headline || '');
       return { ...a, age, isPreview, isRecap };
     })
@@ -487,18 +487,21 @@ async function go() {
     const [gameRaw, newsData, mlbNewsData] = await Promise.all([
       findMetsGame(),
       fetchJSON(`${PROXY}/news/baseball/mlb/${NYM_ID}`),
-      fetchJSON(`${PROXY}/mlbrss/mets`).catch(() => null)
+      fetchJSON(`${PROXY}/mlbrss/mets`).catch(() => null),
+      fetchJSON(`${PROXY}/googlenews/new-york-mets`).catch(() => null)
     ]);
 
     // Merge ESPN + MLB.com news, deduplicate by headline
-    const espnArticles = newsData?.articles || [];
-    const mlbArticles  = (mlbNewsData?.articles || []).map(a => ({
-      headline: a.headline || a.title || '',
-      description: a.description || a.blurb || '',
-      _published: a.date || a.published
-    }));
+    const espnArticles  = newsData?.articles || [];
+    const mlbArticles   = mlbNewsData?.articles || [];
+    const googleArticles = arguments[3]?.articles || [];
     const seenHeadlines = new Set(espnArticles.map(a => a.headline?.slice(0,40)));
-    const combined = [...espnArticles, ...mlbArticles.filter(a => !seenHeadlines.has(a.headline?.slice(0,40)))];
+    const dedup = (arr) => arr.filter(a => {
+      const k = (a.headline||'').slice(0,40);
+      if (seenHeadlines.has(k)) return false;
+      seenHeadlines.add(k); return true;
+    });
+    const combined = [...espnArticles, ...dedup(mlbArticles), ...dedup(googleArticles)];
     const mergedNewsData = { articles: combined };
 
     const g = parseGame(gameRaw);
