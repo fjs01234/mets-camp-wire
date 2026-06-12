@@ -635,6 +635,14 @@ async function go() {
       // INJURIES
       body += `INJURIES:\n${injuryLines}\n\n`;
 
+      // TRANSACTIONS (last 2 days)
+      const txLines = (injuryData?.transactions || []).slice(0, 6);
+      if (txLines.length) {
+        body += `ROSTER MOVES:\n`;
+        txLines.forEach(t => { body += `* ${t.date}: ${t.move}\n`; });
+        body += '\n';
+      }
+
       body += `---\nMETS MOOD: ${getMood(moodType, articles, false)}\n---\n\n`;
       body += `DAD'S CORNER:\n${pick(noahJokes)}\n\nKeep repping the blue and orange. Miss you man.\n\nLove, Dad`;
       return body;
@@ -664,6 +672,18 @@ async function go() {
       }
 
       if (newsEmily) body += `METS NEWS:\n${newsEmily}\n\n`;
+
+      // Transactions for Emily (just today's moves, friendly)
+      const txToday = (injuryData?.transactions || []).filter(t => {
+        const d = new Date(); 
+        const monthDay = d.toLocaleDateString('en-US',{month:'long',day:'numeric'});
+        return t.date === monthDay || t.move;
+      }).slice(0, 3);
+      if (txToday.length) {
+        body += `ROSTER NEWS:\n`;
+        txToday.forEach(t => { body += `* ${t.move}!!\n`; });
+        body += '\n';
+      }
 
       body += `---\nMETS MOOD OF THE DAY: ${getMood(moodType, articles, true)}\n---\n\n`;
       body += `FUN METS FACT:\n${pick(emilyJokes)}\n\n`;
