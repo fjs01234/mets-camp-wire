@@ -484,24 +484,23 @@ async function go() {
   try {
     const dateStr = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
 
-    const [gameRaw, newsData, mlbNewsData] = await Promise.all([
+    const [gameRaw, newsData, googleNewsData] = await Promise.all([
       findMetsGame(),
       fetchJSON(`${PROXY}/news/baseball/mlb/${NYM_ID}`),
-      fetchJSON(`${PROXY}/mlbrss/mets`).catch(() => null),
-      fetchJSON(`${PROXY}/googlenews/new-york-mets`).catch(() => null)
+      fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent('https://news.google.com/rss/search?q=New+York+Mets+baseball&hl=en-US&gl=US&ceid=US:en')}&count=10`)
+        .then(r => r.json())
+        .then(d => ({ articles: (d.items || []).map(a => ({
+          headline: (a.title || '').replace(/\s+-\s+[^-]+$/, '').trim(),
+          description: (a.description || '').replace(/<[^>]+>/g, '').slice(0, 200),
+          _published: a.pubDate || ''
+        })).filter(a => a.headline.length > 10) }))
+        .catch(() => ({ articles: [] }))
     ]);
-
-    // Merge ESPN + MLB.com news, deduplicate by headline
-    const espnArticles  = newsData?.articles || [];
-    const mlbArticles   = mlbNewsData?.articles || [];
-    const googleArticles = arguments[3]?.articles || [];
-    const seenHeadlines = new Set(espnArticles.map(a => a.headline?.slice(0,40)));
-    const dedup = (arr) => arr.filter(a => {
-      const k = (a.headline||'').slice(0,40);
-      if (seenHeadlines.has(k)) return false;
-      seenHeadlines.add(k); return true;
-    });
-    const combined = [...espnArticles, ...dedup(mlbArticles), ...dedup(googleArticles)];
+    const espnArticles   = newsData?.articles || [];
+    const googleArticles = googleNewsData?.articles || [];
+    const seenH = new Set(espnArticles.map(a => (a.headline||'').slice(0,40)));
+    const dedup = arr => arr.filter(a => { const k=(a.headline||'').slice(0,40); if(seenH.has(k)) return false; seenH.add(k); return true; });
+    const combined = [...espnArticles, ...dedup(googleArticles)];
     const mergedNewsData = { articles: combined };
 
     const g = parseGame(gameRaw);
