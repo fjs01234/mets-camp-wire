@@ -379,7 +379,7 @@ function formatBoxscore(detail, forNoah) {
 
 function formatNews(articles, forNoah) {
   if (!articles.length) return '';
-  const toShow = articles.slice(0, forNoah ? 3 : 2);
+  const toShow = articles.slice(0, forNoah ? 5 : 4);
   let out = '';
   toShow.forEach((a, i) => {
     out += `${i+1}. ${a.headline}\n`;
@@ -484,10 +484,22 @@ async function go() {
   try {
     const dateStr = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
 
-    const [gameRaw, newsData] = await Promise.all([
+    const [gameRaw, newsData, mlbNewsData] = await Promise.all([
       findMetsGame(),
-      fetchJSON(`${PROXY}/news/baseball/mlb/${NYM_ID}`)
+      fetchJSON(`${PROXY}/news/baseball/mlb/${NYM_ID}`),
+      fetchJSON(`${PROXY}/mlbnews/mets`).catch(() => null)
     ]);
+
+    // Merge ESPN + MLB.com news, deduplicate by headline
+    const espnArticles = newsData?.articles || [];
+    const mlbArticles  = (mlbNewsData?.articles || []).map(a => ({
+      headline: a.headline || a.title || '',
+      description: a.description || a.blurb || '',
+      _published: a.date || a.published
+    }));
+    const seenHeadlines = new Set(espnArticles.map(a => a.headline?.slice(0,40)));
+    const combined = [...espnArticles, ...mlbArticles.filter(a => !seenHeadlines.has(a.headline?.slice(0,40)))];
+    const mergedNewsData = { articles: combined };
 
     const g = parseGame(gameRaw);
 
@@ -593,7 +605,6 @@ async function go() {
     } catch(e) {}
     const hasCompletedGame = !!(g?.completed || detail?.found);
     const hasLiveGame = !!g?.isLive;
-    const rawArticles = newsData?.articles || [];
     const articles = filterNews(rawArticles, hasCompletedGame, hasLiveGame);
     const moodType = g?.moodType || 'offDay';
 
