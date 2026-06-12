@@ -429,7 +429,10 @@ async function go() {
     const g = parseGame(gameRaw);
 
     // Fetch game detail from proxy -- then parse boxscore directly in client
-    const detailRaw = await fetchJSON(`${PROXY}/gamedetail/baseball/mlb/${NYM_ID}`);
+    const [detailRaw, injuryData] = await Promise.all([
+      fetchJSON(`${PROXY}/gamedetail/baseball/mlb/${NYM_ID}`),
+      fetchJSON(`${PROXY}/injuries/baseball/mlb/${NYM_ID}`)
+    ]);
 
     // If proxy returned hitters (new version), use as-is
     // If hitters empty (old proxy), re-fetch the ESPN summary directly and parse here
@@ -555,7 +558,16 @@ async function go() {
     const newsNoah  = formatNews(articles, true);
     const newsEmily = formatNews(articles, false);
 
-    const injuryLines = (detail?.injuries || []).slice(0, 4).map(i => `* ${i}`).join('\n') || '* No new injury updates today.';
+    const injuryLines = (() => {
+      const list = injuryData?.injuries || detail?.injuries || [];
+      if (!list.length) return '* No new injury updates today.';
+      return list.slice(0, 5).map(i => {
+        if (typeof i === 'string') return `* ${i}`;
+        const status = i.status ? ` (${i.status})` : '';
+        const detail = i.detail ? ` -- ${i.detail}` : '';
+        return `* ${i.name}${status}${detail}`;
+      }).join('\n');
+    })();
 
     function buildNoahEmail() {
       const subjectLabel = moodType==='upcoming' ? 'Game Day' : moodType==='live' ? 'Live Update' : 'Recap';
