@@ -448,10 +448,17 @@ async function fetchMetsInjuries() {
       }
 
       if (inTransactions) {
-        if (monthRe.test(t)) { txDate = t; continue; }
-        if (txDate && (t.startsWith('•') || /Recalled|Optioned|Activated|Placed|Designated|Transferred|Selected|Released/i.test(t))) {
-          const clean = t.replace(/^[•·\s]+/,'').replace(/\[([^\]]+)\]\([^)]+\)/g,'$1').replace(/\*+/g,'').trim();
-          if (clean.length > 5) transactions.push({ date: txDate, move: clean });
+        // Date headers come as "**June 11**" or plain "June 11"
+        const stripped = t.replace(/\*+/g, '').trim();
+        if (monthRe.test(stripped)) { txDate = stripped; continue; }
+        // Transaction lines: bullets or contain roster move keywords
+        if (t.startsWith('•') || t.startsWith('·') || t.startsWith('-') ||
+            /Recalled|Optioned|Activated|Placed|Designated|Transferred|Selected|Released|Reinstated|Claimed/i.test(t)) {
+          const clean = t.replace(/^[•·\-\s]+/,'').replace(/\[([^\]]+)\]\([^)]+\)/g,'$1').replace(/\*+/g,'').trim();
+          if (clean.length > 5) {
+            const date = txDate || 'Recent';
+            transactions.push({ date, move: clean });
+          }
         }
       }
     }
