@@ -357,7 +357,7 @@ function formatBoxscore(detail, forNoah) {
 
   if (forNoah) {
     // Full batting -- filter out 0-for
-    const goodHitters = (nym.hitters || []).filter(h => !h.line.match(/\s0-\d/));
+    const goodHitters = (nym.hitters || []).filter(h => !h.line.match(/:\s0 for/));
     goodHitters.slice(0, 9).forEach(h => { batting += `* ${h.line}
 `; });
     // Full pitching
@@ -470,7 +470,9 @@ async function go() {
                     if (hr && hr !== '0') line += `, ${hr === '1' ? 'HR' : hr + ' HR'}`;
                     if (rbi && rbi !== '0') line += `, ${rbi} RBI`;
                     if (bb && bb !== '0') line += `, BB`;
-                    hitters.push({ name, line });
+                    // Only include batters who got at least 1 hit
+                    const hitCount = parseInt(hab.split(' for ')[0]) || 0;
+                    if (hitCount > 0 || hr !== '0' || rbi !== '0') hitters.push({ name, line });
                   }
                 } else if (type === 'pitching') {
                   const ip = sm['fullInnings.partInnings'];
