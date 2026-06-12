@@ -242,9 +242,11 @@ function filterNews(articles, hasCompletedGame, hasLiveGame) {
       const h = (a.headline || '').toLowerCase();
       const isMetsCentric = /\bmets\b|nym/.test(h);
       if (!isMetsCentric) return false;
-      // Exclude headlines where the story is really about the opponent beating the Mets
-      // Catches both "Padres halt..." and "Freddy Fermin homer helps Padres beat Mets"
-      const isOpponentStory = /\b(yankees|red sox|braves|phillies|marlins|nationals|cubs|brewers|cardinals|pirates|reds|padres|dodgers|giants|rockies|diamondbacks|astros|rangers|angels|athletics|mariners|rays|blue jays|orioles|royals|twins|white sox|tigers|guardians)\b.{0,100}\b(beat|beats|defeat|defeats|top|tops|halt|halts|stop|stops|snap|snaps|edge|edges|blank|blanks|rout|routs|win|wins over|takes series|takes|power|powers|past|downs|hands|hands loss|over the mets|nip|nips)\b.{0,60}\b(mets|new york)\b/i.test(a.headline || '') || /\b(yankees|red sox|braves|phillies|marlins|nationals|cubs|brewers|cardinals|pirates|reds|padres|dodgers|giants|rockies|diamondbacks|astros|rangers|angels|athletics|mariners|rays|blue jays|orioles|royals|twins|white sox|tigers|guardians)\b.{0,30}\b(past|over)\b.{0,20}\b(mets|new york)\b/i.test(a.headline || '');
+      // Exclude any headline where opponent team wins/beats/defeats/powers past the Mets
+      // Strategy: if headline contains an opponent team name AND a win verb AND mets, it's opponent news
+      const oppTeams = 'yankees|red sox|braves|phillies|marlins|nationals|cubs|brewers|cardinals|pirates|reds|padres|dodgers|giants|rockies|diamondbacks|astros|rangers|angels|athletics|mariners|rays|blue jays|orioles|royals|twins|white sox|tigers|guardians';
+      const winVerbs = 'beat|beats|beaten|defeat|defeats|top|tops|halt|halts|stop|stops|snap|snaps|edge|edges|blank|blanks|rout|routs|power|powers|past|downs|hands|nip|nips|win over|wins over|victory over|prevail|prevails|escapes|escape|takes|rallies|rallied|get|gets|takes series|clinch|clinches|sweep|sweeps|outlast|outlasts|shut out|shuts out';
+      const isOpponentStory = new RegExp('(' + oppTeams + ').{0,120}(' + winVerbs + ').{0,60}(mets|new york)', 'i').test(a.headline || '');
       if (isOpponentStory) return false;
       return true;
     })
@@ -432,7 +434,10 @@ async function go() {
     // Fetch game detail using the actual ESPN event ID for accurate box score
     let detailRaw = null;
     if (g?.comp?.id) {
-      detailRaw = await fetchJSON(`${PROXY}/espn?path=sports/baseball/mlb/summary&event=${g.comp.id}`);
+      const eventId = g.comp?.id || gameRaw?.id;
+      if (eventId) {
+        detailRaw = await fetchJSON(`${PROXY}/espn?path=sports/baseball/mlb/summary&event=${eventId}`);
+      }
     }
     const detail = parseDetail(detailRaw, g?.comp?.id);
 
