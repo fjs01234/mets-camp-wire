@@ -441,7 +441,7 @@ async function go() {
 
       if (!hasPlayers && detail.gameId) {
         // Proxy is old version -- parse ESPN summary directly
-        const summaryRaw = await fetchJSON(`${PROXY}/espn?path=sports/baseball/mlb/summary%3Fevent%3D${detail.gameId}`);
+        const summaryRaw = await fetchJSON(`${PROXY}/summary/baseball/mlb/${detail.gameId}`);
         if (summaryRaw?.boxscore?.players?.length) {
           const players = summaryRaw.boxscore.players;
           detail.teamStats = detail.teamStats.map(team => {
