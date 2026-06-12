@@ -449,7 +449,7 @@ async function go() {
             if (!pBlock) return team;
             const hitters = [], pitchers = [];
             for (const sg of (pBlock.statistics || [])) {
-              const type = (sg.name || '').toLowerCase();
+              const type = (sg.type || sg.name || '').toLowerCase();
               const keys = sg.keys || [];
               for (const ath of (sg.athletes || [])) {
                 const name = ath.athlete?.displayName || '';
