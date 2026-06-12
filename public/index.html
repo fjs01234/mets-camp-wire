@@ -229,7 +229,7 @@ function filterNews(articles, hasCompletedGame, hasLiveGame) {
     .map(a => {
       const pub = a._published || a.published || a.lastModified;
       const age = pub ? now - new Date(pub).getTime() : 0; // 0 = assume fresh if no timestamp
-      const isPreview = a._isPreview || /odds|betting|how to watch|keys to the game|injury report|projected lineup|probable pitcher/i.test(a.headline || '');
+      const isPreview = a._isPreview || /odds|betting|how to watch|keys to the game|projected lineup|probable pitcher|host the|hosts the|opens series|begins series|first of.*series|game 1 of/i.test(a.headline || '');
       const isRecap = a._isRecap || /recap|final|highlights|game wrap|series win|wins|beats|defeats|shutout|walk.off|homer|home run|strikeout|rbi/i.test(a.headline || '');
       return { ...a, age, isPreview, isRecap };
     })
