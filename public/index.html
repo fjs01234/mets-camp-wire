@@ -510,9 +510,15 @@ async function go() {
         body += `No game today. Good time to check the standings and see where we sit in the NL East.\n\n`;
       }
 
-      // GAME HIGHLIGHTS (batting)
+      // GAME HIGHLIGHTS (batting stats, or scoring plays as fallback)
       if (boxNoah.batting) {
         body += `GAME HIGHLIGHTS:\n${boxNoah.batting}\n`;
+      } else if (detail?.scoringPlays?.length) {
+        body += `GAME HIGHLIGHTS:\n`;
+        detail.scoringPlays.forEach(p => {
+          body += `* ${p.text}${p.score ? ' (' + p.score + ')' : ''}\n`;
+        });
+        body += '\n';
       }
 
       // PITCHING RECAP
