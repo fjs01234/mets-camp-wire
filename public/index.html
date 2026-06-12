@@ -343,42 +343,42 @@ function parseDetail(raw, gameId) {
 
 function formatBoxscore(detail, forNoah) {
   if (!detail?.found || !detail.teamStats?.length) return { batting: '', pitching: '', boxScore: '' };
-  const nym = detail.teamStats.find(t => t.isNYM);
+  const nym = detail.teamStats.find(t => t.isNYM || t.tAbbr === 'NYM');
   if (!nym) return { batting: '', pitching: '', boxScore: '' };
 
   let batting = '', pitching = '', boxScore = '';
 
-  // BOX SCORE -- all teams line score
-  if (detail.teamStats.length >= 2) {
-    detail.teamStats.forEach(t => {
-      const r = t.runs ?? '?', h = t.hits ?? '?', e = t.errors ?? '0';
-      boxScore += `${(t.abbr||t.name||'???').padEnd(4)} R:${r}  H:${h}  E:${e}\n`;
-    });
+  // BOX SCORE line per team
+  for (const t of detail.teamStats) {
+    const abbr = (t.tAbbr || t.abbr || '???').padEnd(4);
+    // home/away scores come from detail.home / detail.away
+    const isHome = t.tAbbr === detail.home?.abbr;
+    const score = isHome ? (detail.home?.score ?? '?') : (detail.away?.score ?? '?');
+    boxScore += `${abbr} ${score}
+`;
   }
 
   if (forNoah) {
-    // Full batting stats
-    const goodHitters = nym.hitters.filter(h => !h.line.match(/^(\w+ \w+) 0-\d/));
-    if (goodHitters.length) {
-      goodHitters.slice(0, 9).forEach(h => { batting += `* ${h.line}\n`; });
-    }
-    // Full pitching stats
-    if (nym.pitchers.length) {
-      nym.pitchers.forEach(p => { pitching += `* ${p.line}\n`; });
-    }
+    // Full batting -- filter out 0-for
+    const goodHitters = (nym.hitters || []).filter(h => !h.line.match(/\s0-\d/));
+    goodHitters.slice(0, 9).forEach(h => { batting += `* ${h.line}
+`; });
+    // Full pitching
+    (nym.pitchers || []).forEach(p => { pitching += `* ${p.line}
+`; });
   } else {
-    // Just stars for Emily
-    const stars = nym.hitters.filter(h =>
-      h.line.includes('HR') || h.line.includes('RBI') ||
-      (() => { const m = h.line.match(/(\d+)-(\d+)/); return m && parseInt(m[1]) >= 2; })()
-    );
-    stars.slice(0, 3).forEach(h => { batting += `* ${h.line}\n`; });
-    const sp = nym.pitchers[0];
-    if (sp) pitching += `* ${sp.line}\n`;
+    // Emily: stars only (HR, 2+ RBI, or multi-hit)
+    const stars = (nym.hitters || []).filter(h => h.line.includes('HR') || h.line.match(/\s[2-9] RBI/) || h.line.match(/\s[23456789]-\d/));
+    stars.slice(0, 3).forEach(h => { batting += `* ${h.line}
+`; });
+    const sp = (nym.pitchers || [])[0];
+    if (sp) pitching += `* ${sp.line}
+`;
   }
 
   return { batting, pitching, boxScore };
 }
+
 
 function formatNews(articles, forNoah) {
   if (!articles.length) return '';
@@ -431,37 +431,11 @@ async function go() {
 
     const g = parseGame(gameRaw);
 
-    // Fetch game detail using the actual ESPN event ID for accurate box score
-    let detailRaw = null;
-    if (g?.comp?.id) {
-      const eventId = g.comp?.id || gameRaw?.id;
-      if (eventId) {
-        detailRaw = await fetchJSON(`${PROXY}/espn?path=sports/baseball/mlb/summary&event=${eventId}`);
-      }
-    }
-    const detail = parseDetail(detailRaw, g?.comp?.id);
+    // Fetch game detail from proxy /gamedetail -- returns { found, teamStats:[{tAbbr,isNYM,hitters,pitchers}], scoringPlays, keyMoments }
+    const detailRaw = await fetchJSON(`${PROXY}/gamedetail/baseball/mlb/${NYM_ID}`);
+    const detail = detailRaw?.found ? detailRaw : { found: false, teamStats: [], injuries: [] };
 
-    // DEBUG -- remove after fixing
-    const debugEl = document.getElementById('debugBox');
-    if (debugEl) {
-      const box = detailRaw?.boxscore;
-      debugEl.textContent = JSON.stringify({
-        hasRaw: !!detailRaw,
-        rawKeys: detailRaw ? Object.keys(detailRaw) : [],
-        boxKeys: box ? Object.keys(box) : [],
-        teamsCount: box?.teams?.length,
-        playersCount: box?.players?.length,
-        firstTeam: box?.teams?.[0]?.team?.abbreviation,
-        firstPlayerTeam: box?.players?.[0]?.team?.abbreviation,
-        firstPlayerStatGroups: box?.players?.[0]?.statistics?.map(s => s.name),
-        firstBatterKeys: box?.players?.[0]?.statistics?.[0]?.keys,
-        sampleBatter: box?.players?.[0]?.statistics?.[0]?.athletes?.[0]?.athlete?.shortName + ': ' + JSON.stringify(box?.players?.[0]?.statistics?.[0]?.athletes?.[0]?.stats),
-        detailFound: detail.found,
-        teamStats: detail.teamStats?.map(t => t.abbr + ' H:' + t.hitters?.length + ' P:' + t.pitchers?.length),
-        gameId: g?.comp?.id
-      }, null, 2);
-      debugEl.style.display = 'block';
-    }
+
 
     // Fetch next scheduled Mets game for NEXT UP section
     let nextGame = null;
