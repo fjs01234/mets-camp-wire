@@ -348,13 +348,10 @@ function formatBoxscore(detail, forNoah) {
 
   let batting = '', pitching = '', boxScore = '';
 
-  // BOX SCORE line per team
+  // BOX SCORE R/H/E per team
   for (const t of detail.teamStats) {
     const abbr = (t.tAbbr || t.abbr || '???').padEnd(4);
-    // home/away scores come from detail.home / detail.away
-    const isHome = t.tAbbr === detail.home?.abbr;
-    const score = isHome ? (detail.home?.score ?? '?') : (detail.away?.score ?? '?');
-    boxScore += `${abbr} ${score}
+    boxScore += `${abbr} R:${t.R ?? '?'}  H:${t.H ?? '?'}  E:${t.E ?? '0'}
 `;
   }
 
@@ -486,8 +483,8 @@ async function go() {
         : `${g.gameLabel}: The Mets lost to the ${g.oppName}, ${g.oppScore}-${g.nymScore}.\n\n${g.diff>=5?'It was a tough night':'It was actually really close'}, but we love our Mets no matter what!! They will bounce back next game!!`;
     }
 
-    const boxNoah  = (g?.completed || g?.isLive) ? formatBoxscore(detail, true)  : { batting:'', pitching:'', boxScore:'' };
-    const boxEmily = (g?.completed || g?.isLive) ? formatBoxscore(detail, false) : { batting:'', pitching:'', boxScore:'' };
+    const boxNoah  = detail?.found ? formatBoxscore(detail, true)  : { batting:'', pitching:'', boxScore:'' };
+    const boxEmily = detail?.found ? formatBoxscore(detail, false) : { batting:'', pitching:'', boxScore:'' };
     const newsNoah  = formatNews(articles, true);
     const newsEmily = formatNews(articles, false);
 
