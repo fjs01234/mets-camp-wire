@@ -408,27 +408,7 @@ function getMood(moodType, articles, forEmily) {
 
 
 async function fetchMetsInjuries() {
-  try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 1000,
-        tools: [{ type: "web_search_20250305", name: "web_search" }],
-        system: "You are a data extractor. Search for the current Mets injury report and return ONLY a JSON object with no other text. Format: {\"injuries\":[{\"pos\":\"RHP\",\"name\":\"Player Name\",\"injury\":\"description\",\"expectedReturn\":\"date\"}],\"transactions\":[{\"date\":\"June 11\",\"move\":\"description\"}]}",
-        messages: [{ role: "user", content: "Search for 'Mets injuries roster moves site:mlb.com' and extract the current injury list and latest transactions. Return only JSON." }]
-      })
-    });
-    const data = await response.json();
-    const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      return { found: true, injuries: parsed.injuries || [], transactions: parsed.transactions || [] };
-    }
-  } catch(e) {}
-  return { found: false, injuries: [], transactions: [] };
+  return await fetchJSON(`${PROXY}/mlbinjuries/mets`) || { found: false, injuries: [], transactions: [] };
 }
 
 async function go() {
