@@ -223,7 +223,7 @@ function parseGame(game) {
 
 function filterNews(articles, hasCompletedGame, hasLiveGame) {
   const now = Date.now();
-  const FORTY_EIGHT_HOURS = 72 * 60 * 60 * 1000; // 72 hours
+  const FORTY_EIGHT_HOURS = 48 * 60 * 60 * 1000;
 
   return articles
     .map(a => {
@@ -242,6 +242,9 @@ function filterNews(articles, hasCompletedGame, hasLiveGame) {
       const h = (a.headline || '').toLowerCase();
       const isMetsCentric = /\bmets\b|nym/.test(h);
       if (!isMetsCentric) return false;
+      // Filter generic ESPN highlight/boxscore links
+      if (/^(st\. louis|atlanta|philadelphia|new york mets|chicago|san diego).*vs\..*game (highlights|recap|wrap|summary)$/i.test(a.headline || '')) return false;
+      if (/(game highlights|box score|play by play)$/i.test(a.headline || '')) return false;
       // Exclude any headline where opponent team wins/beats/defeats/powers past the Mets
       // Strategy: if headline contains an opponent team name AND a win verb AND mets, it's opponent news
       const oppTeams = 'yankees|red sox|braves|phillies|marlins|nationals|cubs|brewers|cardinals|pirates|reds|padres|dodgers|giants|rockies|diamondbacks|astros|rangers|angels|athletics|mariners|rays|blue jays|orioles|royals|twins|white sox|tigers|guardians';
@@ -605,7 +608,12 @@ async function go() {
     } catch(e) {}
     const hasCompletedGame = !!(g?.completed || detail?.found);
     const hasLiveGame = !!g?.isLive;
-    const rawArticles = mergedNewsData?.articles || newsData?.articles || [];
+    const rawArticles = (mergedNewsData?.articles || newsData?.articles || [])
+      .sort((a, b) => {
+        const da = a._published ? new Date(a._published).getTime() : 0;
+        const db = b._published ? new Date(b._published).getTime() : 0;
+        return db - da; // newest first
+      });
     const articles = filterNews(rawArticles, hasCompletedGame, hasLiveGame);
     const moodType = g?.moodType || 'offDay';
 
