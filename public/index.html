@@ -428,12 +428,16 @@ async function fetchMetsInjuries() {
     const contentRe = /"__typename"\s*:\s*"Markdown"[^}]{0,50}"content"\s*:\s*"((?:[^"\\]|\\.)*)"/g;
     const allBlocks = [];
     let cm;
+    // Decode numeric HTML entities (e.g. &#225; -> á) and common named ones, since MLB's source HTML uses these for accented names
+    const decodeEntities = (s) => s
+      .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)))
+      .replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
     while ((cm = contentRe.exec(html)) !== null) {
       let raw;
       try { raw = JSON.parse('"' + cm[1] + '"'); }
       catch { raw = cm[1].replace(/\\n/g, '\n').replace(/\\"/g, '"'); }
-      // Strip HTML tags (forge-entity etc) but keep inner text
-      allBlocks.push(raw.replace(/<[^>]+>/g, '').replace(/[ \t]{2,}/g, ' '));
+      // Strip HTML tags (forge-entity etc) but keep inner text, then decode entities
+      allBlocks.push(decodeEntities(raw.replace(/<[^>]+>/g, '').replace(/[ \t]{2,}/g, ' ')));
     }
 
     const injuries = [], transactions = [];
