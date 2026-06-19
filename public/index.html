@@ -773,8 +773,6 @@ async function go() {
     async function buildNoahEmailAI() {
       const subjectLabel = moodType==='upcoming' ? 'Game Day' : moodType==='live' ? 'Live Update' : 'Recap';
       const aiBody = await fetchAIBody('noah');
-      console.log('DEBUG boxNoah at AI build time:', JSON.stringify(boxNoah));
-      console.log('DEBUG injuryData at AI build time:', JSON.stringify(injuryData));
       let body = `SUBJECT: Mets ${subjectLabel} -- ${dateStr}\n\nHey Noah,\n\n${aiBody}\n\n`;
 
       // Factual sections stay exact -- same as the template version, just no opener/recap prose duplication
