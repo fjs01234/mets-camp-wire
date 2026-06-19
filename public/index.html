@@ -772,10 +772,18 @@ async function go() {
       let body = `SUBJECT: Mets ${subjectLabel} -- ${dateStr}\n\nHey Noah,\n\n${aiBody}\n\n`;
 
       // Factual sections stay exact -- same as the template version, just no opener/recap prose duplication
+      if (boxNoah.batting) body += `GAME HIGHLIGHTS:\n${boxNoah.batting}\n\n`;
+      if (boxNoah.pitching) body += `PITCHING RECAP:\n${boxNoah.pitching}\n\n`;
       if (boxNoah.boxScore) body += `BOX SCORE:\n${boxNoah.boxScore}\n\n`;
       if (g?.nymRecord) body += `STANDINGS:\nMets record: ${g.nymRecord}\n\n`;
       if (nextGame) body += `NEXT UP:\n${nextGame.label}: NYM vs. ${nextGame.oppAbbr}${nextGame.gameTime ? ' -- ' + nextGame.gameTime : ''}. ${nextGame.atHome ? 'Home game at Citi Field.' : 'Road game.'}\n\n`;
       body += `INJURIES:\n${injuryLines}\n\n`;
+      const aiTxLines = (injuryData?.transactions || []).slice(0, 6);
+      if (aiTxLines.length) {
+        body += `ROSTER MOVES:\n`;
+        aiTxLines.forEach(t => { body += `* ${t.date}: ${t.move}\n`; });
+        body += '\n';
+      }
       body += `Keep repping the blue and orange. Miss you man.\n\nLove, Dad`;
       return body;
     }
@@ -830,8 +838,22 @@ async function go() {
       const aiBody = await fetchAIBody('emily');
       let body = `SUBJECT: Your Mets ${subjectLabel} from Dad!!${extraSubj}\n\nHi Emily!!\n\n${aiBody}\n\n`;
 
+      if (boxEmily.batting) body += `GAME HIGHLIGHTS:\n${boxEmily.batting}\n\n`;
+      if (boxEmily.pitching) body += `PITCHING RECAP:\n${boxEmily.pitching}\n\n`;
       if (g?.nymRecord) body += `STANDINGS:\nMets record: ${g.nymRecord}\n\n`;
       body += nextGame ? `NEXT UP:\n${nextGame.label}: Mets vs. ${nextGame.oppName}${nextGame.gameTime ? ' at ' + nextGame.gameTime : ' tomorrow'}!!\n\n` : '';
+
+      const txTodayAI = (injuryData?.transactions || []).filter(t => {
+        const d = new Date();
+        const monthDay = d.toLocaleDateString('en-US',{month:'long',day:'numeric'});
+        return t.date === monthDay || t.move;
+      }).slice(0, 3);
+      if (txTodayAI.length) {
+        body += `ROSTER NEWS:\n`;
+        txTodayAI.forEach(t => { body += `* ${t.move}!!\n`; });
+        body += '\n';
+      }
+
       body += `Keep cheering for the Mets from camp!\n\nLove you to Citi Field and back,\nDad xoxo`;
       return body;
     }
