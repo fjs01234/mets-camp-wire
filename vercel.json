@@ -1,6 +1,7 @@
 {
   "rewrites": [
     { "source": "/api/proxy/(.*)", "destination": "/api/proxy" },
+    { "source": "/api/generate", "destination": "/api/generate" },
     { "source": "/(.*)", "destination": "/public/index.html" }
   ]
 }
