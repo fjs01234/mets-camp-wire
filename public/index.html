@@ -666,11 +666,11 @@ async function go() {
       // YESTERDAY'S RECAP (always first if available)
       if (detail?.found) {
         // Use detail scores for the recap (more reliable than g scores)
-        const dHome = detail.home?.abbr === 'NYM' ? detail.home : detail.away;
-        const dAway = detail.home?.abbr !== 'NYM' ? detail.home : detail.away;
-        const dNymScore = dHome?.abbr === 'NYM' ? detail.home?.score : detail.away?.score;
-        const dOppScore = dHome?.abbr === 'NYM' ? detail.away?.score : detail.home?.score;
-        const dOppAbbr  = dHome?.abbr === 'NYM' ? detail.away?.abbr : detail.home?.abbr;
+        const dNymSide = detail.home?.abbr === 'NYM' ? detail.home : detail.away;
+        const dOppSide = detail.home?.abbr === 'NYM' ? detail.away : detail.home;
+        const dNymScore = dNymSide?.score;
+        const dOppScore = dOppSide?.score;
+        const dOppAbbr  = dOppSide?.abbr;
         const dWon = parseInt(dNymScore) > parseInt(dOppScore);
         body += `LAST GAME: NYM ${dNymScore}, ${dOppAbbr} ${dOppScore} -- ${dWon ? 'W' : 'L'}`;
         if (g?.nymRecord) body += `  |  Mets: ${g.nymRecord}`;
