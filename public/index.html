@@ -817,7 +817,7 @@ async function go() {
 
       body += `---\nMETS MOOD OF THE DAY: ${getMood(moodType, articles, true)}\n---\n\n`;
       body += `FUN METS FACT:\n${pick(emilyJokes)}\n\n`;
-      body += `I miss you so so much!! Keep cheering for the Mets from camp!!\n\nLove you to Citi Field and back,\nDad xoxo`;
+      body += `Keep cheering for the Mets from camp!\n\nLove you to Citi Field and back,\nDad xoxo`;
       return body;
     }
 
@@ -829,7 +829,7 @@ async function go() {
 
       if (g?.nymRecord) body += `STANDINGS:\nMets record: ${g.nymRecord}\n\n`;
       body += nextGame ? `NEXT UP:\n${nextGame.label}: Mets vs. ${nextGame.oppName}${nextGame.gameTime ? ' at ' + nextGame.gameTime : ' tomorrow'}!!\n\n` : '';
-      body += `I miss you so so much!! Keep cheering for the Mets from camp!!\n\nLove you to Citi Field and back,\nDad xoxo`;
+      body += `Keep cheering for the Mets from camp!\n\nLove you to Citi Field and back,\nDad xoxo`;
       return body;
     }
 
