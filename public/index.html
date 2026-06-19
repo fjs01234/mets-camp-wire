@@ -458,16 +458,19 @@ async function fetchMetsInjuries() {
       }
 
       if (inTransactions) {
-        // Date headers come as "**June 11**" or plain "June 11"
-        const stripped = t.replace(/\*+/g, '').trim();
-        if (monthRe.test(stripped)) { txDate = stripped; continue; }
-        // Transaction lines: bullets or contain roster move keywords
-        if (t.startsWith('•') || t.startsWith('·') || t.startsWith('-') ||
-            /Recalled|Optioned|Activated|Placed|Designated|Transferred|Selected|Released|Reinstated|Claimed/i.test(t)) {
-          const clean = t.replace(/^[•·\-\s]+/,'').replace(/\[([^\]]+)\]\([^)]+\)/g,'$1').replace(/\*+/g,'').trim();
-          if (clean.length > 5) {
-            const date = txDate || 'Recent';
-            transactions.push({ date, move: clean });
+        // Each block can contain a date header AND multiple bullet lines together in one string
+        // (e.g. "June 18 \n• INF X: Recalled \n• SS Y: Optioned") -- split into lines and process each.
+        const lines = t.split('\n').map(l => l.trim()).filter(Boolean);
+        for (const line of lines) {
+          const stripped = line.replace(/\*+/g, '').trim();
+          if (monthRe.test(stripped)) { txDate = stripped; continue; }
+          if (line.startsWith('•') || line.startsWith('·') || line.startsWith('-') ||
+              /Recalled|Optioned|Activated|Placed|Designated|Transferred|Selected|Released|Reinstated|Claimed|Outrighted|Sent on rehab/i.test(line)) {
+            const clean = line.replace(/^[•·\-\s]+/,'').replace(/\[([^\]]+)\]\([^)]+\)/g,'$1').replace(/\*+/g,'').trim();
+            if (clean.length > 5) {
+              const date = txDate || 'Recent';
+              transactions.push({ date, move: clean });
+            }
           }
         }
       }
