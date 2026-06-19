@@ -834,7 +834,7 @@ async function go() {
     }
 
     const useAI = document.getElementById('useAI')?.checked;
-    let noahEmail, emilyEmail, aiFailed = false;
+    let noahEmail, emilyEmail, aiFailed = false, aiErrorMsg = '';
 
     if (useAI) {
       try {
@@ -842,6 +842,7 @@ async function go() {
       } catch (aiErr) {
         console.error('AI generation failed, falling back to templates:', aiErr);
         aiFailed = true;
+        aiErrorMsg = aiErr?.message || String(aiErr);
         noahEmail  = buildNoahEmail();
         emilyEmail = buildEmilyEmail();
       }
@@ -855,7 +856,7 @@ async function go() {
     loading.classList.remove('on');
     output.classList.add('on');
     if (aiFailed) {
-      errEl.textContent = 'AI writing failed, used the regular templates instead. Try again or check the AI key setup.';
+      errEl.textContent = `AI writing failed, used the regular templates instead. Details: ${aiErrorMsg}`;
       errEl.classList.add('on');
     }
 
