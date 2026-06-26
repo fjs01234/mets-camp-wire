@@ -396,7 +396,7 @@ function formatBoxscore(detail, forNoah) {
 `;
   }
 
-  return { batting, pitching, boxScore };
+  return { batting: batting.trimEnd(), pitching: pitching.trimEnd(), boxScore: boxScore.trimEnd() };
 }
 
 
@@ -922,7 +922,7 @@ async function go() {
     // Reset overflow buttons in case a previous generation left one visible
     ['overflowNoah', 'overflowEmily'].forEach(id => {
       const el = document.getElementById(id);
-      if (el) { el.style.display = 'none'; delete overflowStore[id]; }
+      if (el) { el.style.display = 'none'; el.textContent = 'Copy Part 2'; el.classList.remove('ok'); delete overflowStore[id]; }
     });
 
     loading.classList.remove('on');
@@ -1000,15 +1000,25 @@ function copyIt(boxId, btnId, overflowBtnId) {
 
   navigator.clipboard.writeText(kept).then(() => {
     const wasTrimmed = !!overflow;
-    btn.textContent = wasTrimmed ? '✓ Copied (1 of 2)' : '✓ Copied!';
+    btn.textContent = wasTrimmed ? '✓ Copied (1 of ?)' : '✓ Copied!';
     btn.classList.add('ok');
     setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('ok'); }, 2500);
 
     if (overflowBtn) {
       if (wasTrimmed) {
-        overflowStore[overflowBtnId] = overflow;
+        // Build the full queue of remaining parts up front by repeatedly trimming
+        // the leftover content, so Part 2, Part 3, etc. each respect the same
+        // 50-visual-line cap instead of dumping everything uncapped into Part 2.
+        const queue = [];
+        let remaining = overflow;
+        while (remaining) {
+          const { kept: partKept, overflow: partOverflow } = trimToLineLimit(remaining, MAX_LINES);
+          queue.push(partKept);
+          remaining = partOverflow;
+        }
+        overflowStore[overflowBtnId] = { queue, index: 0 };
         overflowBtn.style.display = 'inline-block';
-        overflowBtn.textContent = 'Copy Part 2';
+        overflowBtn.textContent = `Copy Part 2 of ${queue.length + 1}`;
         overflowBtn.classList.remove('ok');
       } else {
         overflowBtn.style.display = 'none';
@@ -1019,14 +1029,28 @@ function copyIt(boxId, btnId, overflowBtnId) {
 }
 
 function copyOverflow(overflowBtnId) {
-  const overflow = overflowStore[overflowBtnId];
-  if (!overflow) return;
+  const state = overflowStore[overflowBtnId];
+  if (!state || state.index >= state.queue.length) return;
   const btn = document.getElementById(overflowBtnId);
-  const text = `(continued)\n\n${overflow}`;
+  const partNum = state.index + 2; // part 1 was the main Copy button
+  const totalParts = state.queue.length + 1;
+  const text = `(continued)\n\n${state.queue[state.index]}`;
+
   navigator.clipboard.writeText(text).then(() => {
-    btn.textContent = '✓ Copied (2 of 2)';
+    btn.textContent = `✓ Copied (${partNum} of ${totalParts})`;
     btn.classList.add('ok');
-    setTimeout(() => { btn.textContent = 'Copy Part 2'; btn.classList.remove('ok'); }, 2500);
+    state.index += 1;
+
+    setTimeout(() => {
+      btn.classList.remove('ok');
+      if (state.index < state.queue.length) {
+        btn.textContent = `Copy Part ${state.index + 2} of ${totalParts}`;
+      } else {
+        btn.textContent = 'Copy Part 2'; // reset for next generation
+        btn.style.display = 'none';
+        delete overflowStore[overflowBtnId];
+      }
+    }, 2500);
   });
 }
 
