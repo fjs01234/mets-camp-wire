@@ -944,28 +944,42 @@ async function go() {
 }
 
 const MAX_LINES = 50;
+const WRAP_WIDTH = 32; // conservative estimate of chars per visual line in CampInTouch's mobile textarea
 const overflowStore = {}; // holds overflow text per overflow-button id
 
-// Trims body text to fit CampInTouch's 50-line limit without cutting mid-sentence.
-// Splits into paragraphs (blank-line-separated blocks), always protects the final
-// paragraph (sign-off), and fills earlier paragraphs in order up to the line budget --
-// dropping only the lowest-priority trailing sections (mood, joke, roster moves, etc.)
-// since the body is built in priority order with the most important info first.
+// Estimates how many visual (wrapped) lines a single \n-delimited line will take
+// up in a narrow mobile textarea, since a long sentence wraps to multiple rows
+// even though it's one line in the underlying string.
+function visualLineCount(line) {
+  if (line.length === 0) return 1;
+  return Math.ceil(line.length / WRAP_WIDTH);
+}
+
+// Total estimated visual lines for a block of text (sum of wrapped lines per \n-line).
+function totalVisualLines(text) {
+  return text.split('\n').reduce((sum, line) => sum + visualLineCount(line), 0);
+}
+
+// Trims body text to fit CampInTouch's 50-VISUAL-line limit without cutting mid-sentence.
+// Counts wrapped lines (not raw \n count) since long sentences wrap to multiple rows
+// on a narrow mobile textarea. Splits into paragraphs (blank-line-separated blocks),
+// always protects the final paragraph (sign-off), and fills earlier paragraphs in
+// order up to the visual-line budget -- dropping only the lowest-priority trailing
+// sections (mood, joke, roster moves, etc.) since the body is built in priority order.
 // Returns { kept, overflow } -- overflow is '' if nothing needed to be cut.
 function trimToLineLimit(text, maxLines) {
-  const lines = text.split('\n');
-  if (lines.length <= maxLines) return { kept: text, overflow: '' };
+  if (totalVisualLines(text) <= maxLines) return { kept: text, overflow: '' };
 
   const paragraphs = text.split('\n\n');
   const signoffPara = paragraphs[paragraphs.length - 1];
-  const signoffLines = signoffPara.split('\n').length;
+  const signoffLines = totalVisualLines(signoffPara);
   const budget = Math.max(maxLines - signoffLines - 1, 1); // -1 for blank line before sign-off
 
   let runningLines = 0;
   const keptParas = [];
   let cutoffIdx = paragraphs.length - 1; // index of first dropped paragraph
   for (let i = 0; i < paragraphs.length - 1; i++) {
-    const paraLines = paragraphs[i].split('\n').length;
+    const paraLines = totalVisualLines(paragraphs[i]);
     const extra = keptParas.length ? paraLines + 1 : paraLines; // +1 for blank separator
     if (runningLines + extra > budget) { cutoffIdx = i; break; }
     keptParas.push(paragraphs[i]);
