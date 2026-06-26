@@ -39,8 +39,13 @@
   .card-name.noah { color:#6b9dff; }
   .card-name.emily { color:var(--orange); }
   .card-age { font-family:'IBM Plex Mono',monospace; font-size:10px; color:rgba(248,244,239,.4); letter-spacing:2px; }
+  .email-subject { padding:10px 18px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:rgba(248,244,239,.55); border-bottom:1px solid rgba(248,244,239,.08); cursor:pointer; }
+  .email-subject .lbl { color:rgba(248,244,239,.35); letter-spacing:1px; margin-right:6px; }
+  .email-subject.copied { color:var(--orange); }
   .copy-btn { padding:6px 14px; background:transparent; border:1px solid rgba(255,255,255,.2); color:rgba(255,255,255,.6); border-radius:3px; font-family:'IBM Plex Mono',monospace; font-size:11px; cursor:pointer; transition:all .2s; text-transform:uppercase; }
   .copy-btn:hover { border-color:var(--orange); color:var(--orange); }
+  .header-btns { display:flex; gap:8px; align-items:center; }
+  .overflow-btn { border-color:rgba(255,89,16,.5); color:rgba(255,89,16,.8); }
   .copy-btn.ok { background:#4ade80; border-color:#4ade80; color:white; }
   .email-box { padding:18px; font-family:'IBM Plex Mono',monospace; font-size:12px; line-height:1.8; color:var(--cream); white-space:pre-wrap; word-break:break-word; min-height:400px; max-height:700px; overflow-y:auto; }
   .output { display:none; }
@@ -86,15 +91,23 @@
       <div class="email-card">
         <div class="email-card-header noah">
           <div><div class="card-name noah">Noah</div><div class="card-age">AGE 15</div></div>
-          <button class="copy-btn" id="copyNoah" onclick="copyIt('noahBox','copyNoah')">Copy</button>
+          <div class="header-btns">
+            <button class="copy-btn overflow-btn" id="overflowNoah" onclick="copyOverflow('overflowNoah')" style="display:none;">Copy Part 2</button>
+            <button class="copy-btn" id="copyNoah" onclick="copyIt('noahBox','copyNoah','overflowNoah')">Copy</button>
+          </div>
         </div>
+        <div class="email-subject" id="noahSubject"></div>
         <div class="email-box" id="noahBox"></div>
       </div>
       <div class="email-card">
         <div class="email-card-header emily">
           <div><div class="card-name emily">Emily</div><div class="card-age">AGE 12</div></div>
-          <button class="copy-btn" id="copyEmily" onclick="copyIt('emilyBox','copyEmily')">Copy</button>
+          <div class="header-btns">
+            <button class="copy-btn overflow-btn" id="overflowEmily" onclick="copyOverflow('overflowEmily')" style="display:none;">Copy Part 2</button>
+            <button class="copy-btn" id="copyEmily" onclick="copyIt('emilyBox','copyEmily','overflowEmily')">Copy</button>
+          </div>
         </div>
+        <div class="email-subject" id="emilySubject"></div>
         <div class="email-box" id="emilyBox"></div>
       </div>
     </div>
@@ -880,8 +893,38 @@ async function go() {
       emilyEmail = buildEmilyEmail();
     }
 
-    document.getElementById('noahBox').textContent = noahEmail.trim();
-    document.getElementById('emilyBox').textContent = emilyEmail.trim();
+    function splitSubject(fullText) {
+      const trimmed = fullText.trim();
+      const firstBreak = trimmed.indexOf('\n');
+      const firstLine = firstBreak === -1 ? trimmed : trimmed.slice(0, firstBreak);
+      if (firstLine.startsWith('SUBJECT:')) {
+        return {
+          subject: firstLine.slice('SUBJECT:'.length).trim(),
+          body: trimmed.slice(firstBreak + 1).trim()
+        };
+      }
+      return { subject: '', body: trimmed };
+    }
+
+    const noahSplit = splitSubject(noahEmail);
+    const emilySplit = splitSubject(emilyEmail);
+
+    document.getElementById('noahBox').textContent = noahSplit.body;
+    document.getElementById('emilyBox').textContent = emilySplit.body;
+
+    const noahSubjEl = document.getElementById('noahSubject');
+    const emilySubjEl = document.getElementById('emilySubject');
+    noahSubjEl.innerHTML = `<span class="lbl">SUBJECT</span>${noahSplit.subject}`;
+    emilySubjEl.innerHTML = `<span class="lbl">SUBJECT</span>${emilySplit.subject}`;
+    noahSubjEl.onclick = () => copySubject(noahSubjEl, noahSplit.subject);
+    emilySubjEl.onclick = () => copySubject(emilySubjEl, emilySplit.subject);
+
+    // Reset overflow buttons in case a previous generation left one visible
+    ['overflowNoah', 'overflowEmily'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.style.display = 'none'; delete overflowStore[id]; }
+    });
+
     loading.classList.remove('on');
     output.classList.add('on');
     if (aiFailed) {
@@ -900,13 +943,85 @@ async function go() {
   btn.textContent = '⚾ Generate Today\'s Emails';
 }
 
-function copyIt(boxId, btnId) {
-  const text = document.getElementById(boxId).textContent;
+const MAX_LINES = 50;
+const overflowStore = {}; // holds overflow text per overflow-button id
+
+// Trims body text to fit CampInTouch's 50-line limit without cutting mid-sentence.
+// Splits into paragraphs (blank-line-separated blocks), always protects the final
+// paragraph (sign-off), and fills earlier paragraphs in order up to the line budget --
+// dropping only the lowest-priority trailing sections (mood, joke, roster moves, etc.)
+// since the body is built in priority order with the most important info first.
+// Returns { kept, overflow } -- overflow is '' if nothing needed to be cut.
+function trimToLineLimit(text, maxLines) {
+  const lines = text.split('\n');
+  if (lines.length <= maxLines) return { kept: text, overflow: '' };
+
+  const paragraphs = text.split('\n\n');
+  const signoffPara = paragraphs[paragraphs.length - 1];
+  const signoffLines = signoffPara.split('\n').length;
+  const budget = Math.max(maxLines - signoffLines - 1, 1); // -1 for blank line before sign-off
+
+  let runningLines = 0;
+  const keptParas = [];
+  let cutoffIdx = paragraphs.length - 1; // index of first dropped paragraph
+  for (let i = 0; i < paragraphs.length - 1; i++) {
+    const paraLines = paragraphs[i].split('\n').length;
+    const extra = keptParas.length ? paraLines + 1 : paraLines; // +1 for blank separator
+    if (runningLines + extra > budget) { cutoffIdx = i; break; }
+    keptParas.push(paragraphs[i]);
+    runningLines += extra;
+  }
+
+  const droppedParas = paragraphs.slice(cutoffIdx, paragraphs.length - 1);
+  const kept = [...keptParas, signoffPara].join('\n\n');
+  const overflow = droppedParas.length ? droppedParas.join('\n\n') : '';
+  return { kept, overflow };
+}
+
+function copyIt(boxId, btnId, overflowBtnId) {
+  const rawText = document.getElementById(boxId).textContent;
+  const { kept, overflow } = trimToLineLimit(rawText, MAX_LINES);
   const btn = document.getElementById(btnId);
-  navigator.clipboard.writeText(text).then(() => {
-    btn.textContent = '✓ Copied!';
+  const overflowBtn = overflowBtnId ? document.getElementById(overflowBtnId) : null;
+
+  navigator.clipboard.writeText(kept).then(() => {
+    const wasTrimmed = !!overflow;
+    btn.textContent = wasTrimmed ? '✓ Copied (1 of 2)' : '✓ Copied!';
     btn.classList.add('ok');
-    setTimeout(() => { btn.textContent='Copy'; btn.classList.remove('ok'); }, 2500);
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('ok'); }, 2500);
+
+    if (overflowBtn) {
+      if (wasTrimmed) {
+        overflowStore[overflowBtnId] = overflow;
+        overflowBtn.style.display = 'inline-block';
+        overflowBtn.textContent = 'Copy Part 2';
+        overflowBtn.classList.remove('ok');
+      } else {
+        overflowBtn.style.display = 'none';
+        delete overflowStore[overflowBtnId];
+      }
+    }
+  });
+}
+
+function copyOverflow(overflowBtnId) {
+  const overflow = overflowStore[overflowBtnId];
+  if (!overflow) return;
+  const btn = document.getElementById(overflowBtnId);
+  const text = `(continued)\n\n${overflow}`;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✓ Copied (2 of 2)';
+    btn.classList.add('ok');
+    setTimeout(() => { btn.textContent = 'Copy Part 2'; btn.classList.remove('ok'); }, 2500);
+  });
+}
+
+function copySubject(el, subject) {
+  navigator.clipboard.writeText(subject).then(() => {
+    el.classList.add('copied');
+    const original = el.innerHTML;
+    el.innerHTML = `<span class="lbl">SUBJECT</span>✓ Copied`;
+    setTimeout(() => { el.innerHTML = original; el.classList.remove('copied'); }, 1800);
   });
 }
 </script>
